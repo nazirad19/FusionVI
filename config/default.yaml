@@ -8,6 +8,11 @@ early_stopping_patience: 6
 # CD80 was measured by external flow cytometry but is not one of the released
 # 39 ADTs. HLA-DR provides an input-panel myeloid activation marker.
 heldout_proteins: [CD25, CD69, HLA-DR]
+cross_modal_head:
+  inner_group_folds: 3
+  candidates: [ridge, histgb, extra_trees]
+  # Inputs exclude the target marker: latent state, remaining 36 ADTs and the
+  # prespecified marker-matched RNA proxy.
 # The released RNA matrix uses Ensembl identifiers. These prespecified response
 # genes were already among the 4,000 selected HVGs in the executed dataset.
 activation_genes:

@@ -7,6 +7,7 @@ data/processed/
 models/
 results/folds/
 results/fusion_gates_all_cells.csv
+results/cross_modal_head_predictions.csv
 lightning_logs/
 build/
 .codex-finalizer/

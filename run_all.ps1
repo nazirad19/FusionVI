@@ -10,3 +10,5 @@ if (-not (Test-Path $python)) { throw 'Create .venv and install requirements.txt
 & (Join-Path $PSScriptRoot 'run_cv.ps1')
 & $python (Join-Path $PSScriptRoot 'src\classical_baselines.py')
 & $python (Join-Path $PSScriptRoot 'src\evaluate.py')
+& $python (Join-Path $PSScriptRoot 'src\cross_modal_head.py')
+& $python (Join-Path $PSScriptRoot 'src\make_cross_modal_figures.py')

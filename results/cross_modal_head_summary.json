@@ -1,0 +1,15 @@
+{
+  "outer_folds": 10,
+  "inner_group_folds": 3,
+  "heldout_markers": [
+    "CD25",
+    "CD69",
+    "HLA-DR"
+  ],
+  "candidate_heads": [
+    "ridge",
+    "histgb",
+    "extra_trees"
+  ],
+  "selection_unit": "training donor"
+}
