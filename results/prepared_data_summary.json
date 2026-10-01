@@ -1,0 +1,26 @@
+{
+  "cells": 16382,
+  "genes": 4000,
+  "proteins": 39,
+  "donors": 10,
+  "lanes": 10,
+  "conditions": {
+    "CD3_CD28": 5743,
+    "LPS": 5432,
+    "Baseline": 5207
+  },
+  "cell_types": {
+    "CD4T_Naive": 4778,
+    "CD4T_Mem": 3035,
+    "CD8T_Naive": 2648,
+    "CD8T_Mem": 1778,
+    "CD14_Mono": 1653,
+    "NK": 1409,
+    "B": 1081
+  },
+  "heldout_proteins": [
+    "CD25",
+    "CD69",
+    "HLA-DR"
+  ]
+}

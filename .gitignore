@@ -1,0 +1,13 @@
+.mpl/
+__pycache__/
+*.py[cod]
+.venv/
+data/raw/
+data/processed/
+models/
+results/folds/
+results/fusion_gates_all_cells.csv
+lightning_logs/
+build/
+.codex-finalizer/
+LibreOffice_*/

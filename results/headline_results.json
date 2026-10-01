@@ -1,0 +1,196 @@
+{
+  "seed": 2026,
+  "folds_per_model": 10,
+  "unit_of_replication": "held-out donor",
+  "primary_results": [
+    {
+      "analysis": "heldout_marker",
+      "target": "CD25_T",
+      "metric": "discordant_spearman",
+      "n_donors": 10,
+      "totalvi_mean": 0.642465176414641,
+      "fusionvi_mean": 0.6613482549813545,
+      "mean_paired_difference": 0.01888307856671368,
+      "difference_ci_low": -0.010442890099837177,
+      "difference_ci_high": 0.0453370333588477,
+      "wilcoxon_p": 0.232421875,
+      "bh_q": 0.3818359375
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "CD25_T",
+      "metric": "effect_concordance",
+      "n_donors": 10,
+      "totalvi_mean": 0.9226569245415501,
+      "fusionvi_mean": 0.9199055734427863,
+      "mean_paired_difference": -0.002751351098763721,
+      "difference_ci_low": -0.004477853833629078,
+      "difference_ci_high": -0.001407269149480451,
+      "wilcoxon_p": 0.00390625,
+      "bh_q": 0.014973958333333334
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "CD25_T",
+      "metric": "spearman_true_pred",
+      "n_donors": 10,
+      "totalvi_mean": 0.77880206598954,
+      "fusionvi_mean": 0.7786645460664713,
+      "mean_paired_difference": -0.00013751992306892946,
+      "difference_ci_low": -0.003987003609040106,
+      "difference_ci_high": 0.00368889075519838,
+      "wilcoxon_p": 0.921875,
+      "bh_q": 1.0
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "CD69_T",
+      "metric": "discordant_spearman",
+      "n_donors": 10,
+      "totalvi_mean": 0.5334271483773211,
+      "fusionvi_mean": 0.520383489269314,
+      "mean_paired_difference": -0.01304365910800705,
+      "difference_ci_low": -0.03444319178813071,
+      "difference_ci_high": 0.01007541439317124,
+      "wilcoxon_p": 0.193359375,
+      "bh_q": 0.3818359375
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "CD69_T",
+      "metric": "effect_concordance",
+      "n_donors": 10,
+      "totalvi_mean": 0.9946126661575946,
+      "fusionvi_mean": 0.9937443712247074,
+      "mean_paired_difference": -0.0008682949328871259,
+      "difference_ci_low": -0.001136697812579863,
+      "difference_ci_high": -0.0005735224970452383,
+      "wilcoxon_p": 0.00390625,
+      "bh_q": 0.014973958333333334
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "CD69_T",
+      "metric": "spearman_true_pred",
+      "n_donors": 10,
+      "totalvi_mean": 0.8218055911586845,
+      "fusionvi_mean": 0.8263259940265204,
+      "mean_paired_difference": 0.004520402867835937,
+      "difference_ci_low": 0.0009623965445919728,
+      "difference_ci_high": 0.008267106301812667,
+      "wilcoxon_p": 0.064453125,
+      "bh_q": 0.16471354166666666
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "HLA_DR_Monocyte",
+      "metric": "discordant_spearman",
+      "n_donors": 8,
+      "totalvi_mean": -0.1748340616324194,
+      "fusionvi_mean": -0.05663601805158543,
+      "mean_paired_difference": 0.118198043580834,
+      "difference_ci_low": -0.05783950086991795,
+      "difference_ci_high": 0.2842851872070138,
+      "wilcoxon_p": 0.25,
+      "bh_q": 0.38333333333333336
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "HLA_DR_Monocyte",
+      "metric": "effect_concordance",
+      "n_donors": 10,
+      "totalvi_mean": 0.8560510863869931,
+      "fusionvi_mean": 0.851654036610558,
+      "mean_paired_difference": -0.004397049776434903,
+      "difference_ci_low": -0.057886474766012816,
+      "difference_ci_high": 0.05128239700879537,
+      "wilcoxon_p": 0.921875,
+      "bh_q": 1.0
+    },
+    {
+      "analysis": "heldout_marker",
+      "target": "HLA_DR_Monocyte",
+      "metric": "spearman_true_pred",
+      "n_donors": 10,
+      "totalvi_mean": 0.40407196888638175,
+      "fusionvi_mean": 0.42148885184106255,
+      "mean_paired_difference": 0.017416882954680822,
+      "difference_ci_low": -0.03783588965969743,
+      "difference_ci_high": 0.06349075502685138,
+      "wilcoxon_p": 0.232421875,
+      "bh_q": 0.3818359375
+    },
+    {
+      "analysis": "latent_response",
+      "target": "B_cell_indirect",
+      "metric": "auc",
+      "n_donors": 10,
+      "totalvi_mean": 0.9966669980900595,
+      "fusionvi_mean": 0.9936142625299302,
+      "mean_paired_difference": -0.003052735560129349,
+      "difference_ci_low": -0.009340547814554966,
+      "difference_ci_high": 0.002662654024480251,
+      "wilcoxon_p": 0.546875,
+      "bh_q": 0.673828125
+    },
+    {
+      "analysis": "latent_response",
+      "target": "Monocyte_direct",
+      "metric": "auc",
+      "n_donors": 10,
+      "totalvi_mean": 1.0,
+      "fusionvi_mean": 1.0,
+      "mean_paired_difference": 0.0,
+      "difference_ci_low": 0.0,
+      "difference_ci_high": 0.0,
+      "wilcoxon_p": 1.0,
+      "bh_q": 1.0
+    },
+    {
+      "analysis": "latent_response",
+      "target": "NK_indirect",
+      "metric": "auc",
+      "n_donors": 10,
+      "totalvi_mean": 0.9947851469932308,
+      "fusionvi_mean": 0.996527186195671,
+      "mean_paired_difference": 0.0017420392024404153,
+      "difference_ci_low": 0.0003311017714456299,
+      "difference_ci_high": 0.0031952638650413817,
+      "wilcoxon_p": 0.046875,
+      "bh_q": 0.15401785714285715
+    },
+    {
+      "analysis": "latent_response",
+      "target": "T_cell_direct",
+      "metric": "auc",
+      "n_donors": 10,
+      "totalvi_mean": 0.9995997011706699,
+      "fusionvi_mean": 0.9997582864307641,
+      "mean_paired_difference": 0.0001585852600941573,
+      "difference_ci_low": 5.396295418910041e-05,
+      "difference_ci_high": 0.0002637748822573546,
+      "wilcoxon_p": 0.064453125,
+      "bh_q": 0.16471354166666666
+    }
+  ],
+  "gate_discordance": [
+    {
+      "target": "CD25_T",
+      "n_donors": 10,
+      "discordant_minus_concordant_protein_gate": -0.024787964133624874,
+      "wilcoxon_p": 0.02734375
+    },
+    {
+      "target": "CD69_T",
+      "n_donors": 10,
+      "discordant_minus_concordant_protein_gate": 0.09024264364288355,
+      "wilcoxon_p": 0.001953125
+    },
+    {
+      "target": "HLA_DR_Monocyte",
+      "n_donors": 10,
+      "discordant_minus_concordant_protein_gate": -0.0003756896404295995,
+      "wilcoxon_p": 0.921875
+    }
+  ]
+}

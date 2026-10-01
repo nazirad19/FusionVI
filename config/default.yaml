@@ -1,0 +1,20 @@
+project_seed: 2026
+n_hvg: 4000
+n_latent: 15
+n_hidden: 192
+max_epochs: 40
+batch_size: 256
+early_stopping_patience: 6
+# CD80 was measured by external flow cytometry but is not one of the released
+# 39 ADTs. HLA-DR provides an input-panel myeloid activation marker.
+heldout_proteins: [CD25, CD69, HLA-DR]
+# The released RNA matrix uses Ensembl identifiers. These prespecified response
+# genes were already among the 4,000 selected HVGs in the executed dataset.
+activation_genes:
+  - ENSG00000125538 # IL1B
+  - ENSG00000105374 # NKG7
+  - ENSG00000180644 # PRF1
+  - ENSG00000110848 # CD69
+  - ENSG00000134460 # IL2RA
+  - ENSG00000204287 # HLA-DRA
+  - ENSG00000196126 # HLA-DRB1
