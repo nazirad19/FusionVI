@@ -1,4 +1,0 @@
-target,n_donors,discordant_minus_concordant_protein_gate,wilcoxon_p
-CD25_T,10,-0.024787964133624874,0.02734375
-CD69_T,10,0.09024264364288355,0.001953125
-HLA_DR_Monocyte,10,-0.0003756896404295995,0.921875

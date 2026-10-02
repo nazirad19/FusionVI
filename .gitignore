@@ -6,10 +6,12 @@ data/raw/
 data/processed/
 models/
 results/folds/
-results/experiment2_papalexi/folds/
-results/experiment3_totalvi_original/folds/
-results/fusion_gates_all_cells.csv
+results/final_folds/
+results/experiment2_papalexi/
+results/experiment3_totalvi_original/
 results/cross_modal_head_predictions.csv
+results/fusion_gates_all_cells.csv
+results/figures/*.svg
 lightning_logs/
 build/
 .codex-finalizer/

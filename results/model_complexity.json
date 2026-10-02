@@ -1,7 +1,0 @@
-{
-  "totalvi_parameters": 3408959,
-  "fusionvi_parameters": 2710273,
-  "fusionvi_minus_totalvi": -698686,
-  "fusionvi_relative_size": 0.7950394451883983,
-  "comparison": "Full totalVI module state dictionaries with only the encoder replaced"
-}

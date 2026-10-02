@@ -1,4 +1,4 @@
-"""Encoder variants used to test balanced RNA/protein inference in totalVI."""
+"""Encoders for the paper totalVI baseline and the final FusionVI model."""
 
 from __future__ import annotations
 
@@ -58,8 +58,8 @@ class MaskedJointEncoderTOTALVI(nn.Module):
         return self.base(masked, *cat_list)
 
 
-class DualBranchEncoderTOTALVI(nn.Module):
-    """Equal-width RNA and protein encoders with a cell-specific fusion gate."""
+class FusionVIEncoder(nn.Module):
+    """Separate RNA/protein branches joined by a cell-specific fusion gate."""
 
     def __init__(
         self,

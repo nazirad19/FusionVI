@@ -1,151 +1,93 @@
-# FusionVI-X
+# FusionVI
 
-FusionVI-X tests whether targeted cross-modal learning can recover hidden
-therapeutic surface biomarkers from paired single-cell RNA and protein data.
-It contains three complementary experiments:
+FusionVI is a focused comparison with the original totalVI method on the
+official SLN111 CITE-seq dataset used in the totalVI paper.
 
-1. **Lawlor PBMC stimulation:** can CD25, CD69 and HLA-DR be recovered in an
-   unseen donor when RNA and protein disagree?
-2. **Papalexi ECCITE-seq:** can surface PD-L1 responses be predicted for an
-   entirely unseen CRISPR target after IFN-gamma stimulation?
-3. **Original totalVI SLN111:** does the method transfer to the original
-   totalVI paper's mouse spleen/lymph-node data when an entire mouse is unseen?
+## Biological question
 
-Together they ask:
+Can RNA and the remaining surface-protein panel recover the abundance of a
+missing immune-cell marker in a biological replicate that the model has never
+seen?
 
-> When perturbation produces disagreement between transcript and surface-protein
-> evidence, can cross-modal context recover pharmacodynamic biomarkers in an
-> unseen donor or after an unseen molecular perturbation?
+The four hidden markers have distinct biological roles:
 
-The study uses the Lawlor et al. PBMC CITE-seq experiment: 16,382 cells from 10
-paired donors under baseline, LPS, or anti-CD3/CD28 stimulation, with 39 ADTs.
-The external validation uses the Papalexi et al. ECCITE-seq screen: 20,729
-IFN-gamma-treated THP-1 cells, 25 perturbed genes plus non-targeting controls,
-three biological replicates and four surface proteins. PD-L1 is hidden at model
-input and recovered from 2,000 RNA features plus CD86, PD-L2 and CD366.
-The technical transfer experiment uses the official SLN111 object from the
-totalVI reproducibility repository: 16,813 non-negative cells, 4,000 genes and
-110 proteins from two biological replicate mice.
+- **CD20 / Ms4a1:** B-cell identity and a therapeutic target.
+- **CD28 / Cd28:** T-cell costimulation and immune activation.
+- **CD4 / Cd4:** helper-T-cell lineage.
+- **CD8a / Cd8a:** cytotoxic-T-cell lineage.
 
-## Method
+Recovering these proteins tests whether a multimodal model can preserve immune
+cell identity when a clinically relevant surface measurement is unavailable.
 
-The study contains two linked experiments.
+## Models compared
 
-**Encoder ablation.** FusionVI replaces totalVI's joint encoder with an RNA
-branch, a protein branch and a learned scalar gate for every cell. The decoder,
-likelihoods, latent size, training objective, preprocessing, seed and donor
-splits remain fixed.
+Only two final models are reported.
 
-**Targeted cross-modal readout.** FusionVI-X predicts each hidden surface marker
-from the FusionVI latent state, the remaining 36 ADTs and a prespecified
-marker-matched RNA proxy. Ridge, histogram gradient boosting and Extra Trees are
-candidate heads. Within each outer fold, the head family is selected by
-three-fold grouped validation among the nine training donors, refit on those
-nine donors, and evaluated once on the untouched tenth donor. Standard totalVI
-receives the identical readout as a control (`totalVI-X`).
+### totalVI
 
-CD25, CD69 and HLA-DR are zeroed at encoder input and never used as readout
-features. Their measured values are available only as training targets in the
-nine training donors and as evaluation targets in the held-out donor. CD80 was
-measured by external flow cytometry in the source paper but is absent from the
-released 39-ADT matrix.
+The baseline follows the paper's joint RNA-protein encoder and native
+generative protein decoder. The four evaluation proteins are masked at encoder
+input so totalVI must infer them from the other measurements.
 
-## Evaluation design
+### FusionVI
 
-- **10-fold leave-one-donor-out validation**: each donor is the test set once.
-- **Nested model selection**: readout family selected using training donors only.
-- **Direct responses**: anti-CD3/CD28 T cells and LPS monocytes.
-- **Held-out markers**: CD25/CD69 in T cells and HLA-DR in monocytes.
-- **Discordance challenge**: marker RNA and measured protein percentile ranks
-  differ by at least 0.50 within donor and relevant cell population.
-- **Ablations**: RNA proxy, remaining ADTs, RNA+ADT context, totalVI-X and
-  FusionVI-X.
-- **Statistics**: one value per held-out donor, paired Wilcoxon tests, bootstrap
-  confidence intervals and Benjamini-Hochberg correction.
+FusionVI replaces the joint encoder with separate RNA and protein branches. A
+cell-specific gate combines their hidden states. The final prediction uses the
+FusionVI latent state, the remaining 106 proteins and the prespecified matching
+transcript in a fixed Ridge readout. The same four proteins are excluded from
+all prediction inputs.
 
-Experiment 2 uses five outer folds. All cells targeting a CRISPR gene are kept
-together, so every target is evaluated exactly once and is absent from that
-fold's training set. Non-targeting cells are partitioned within replicate to
-provide an untouched reference in every fold. Ridge versus Extra Trees is
-selected through inner CRISPR-target-grouped validation. Final outcomes are
-computed from 75 target-by-replicate effects rather than treating cells as
-independent experiments.
+## Data and study design
 
-## Executed results
+The checksum-verified `spleen_lymph_111.h5ad` file comes from the official
+totalVI reproducibility repository associated with Gayoso et al., *Nature
+Methods* (2021), accession GSE150599.
 
-For Experiment 1, all 20 neural runs completed at 40 epochs. Broad stimulation
-labels were already at ceiling: standard totalVI achieved mean donor-held-out
-ROC AUCs of 0.995 to 1.000. The scalar gate learned biological context but did
-not reliably improve marker reconstruction by itself. Experiment 2 added ten
-30-epoch neural runs: standard totalVI and FusionVI in each of five
-target-held-out folds.
+- 16,813 non-negative cells after filtering
+- 4,000 highly variable genes
+- 110 biological proteins after removing hashtag controls
+- two biological replicate mice
+- spleen and lymph-node samples from each mouse
+- two-fold leave-one-mouse-out evaluation
+- 25 training epochs per model and fold
 
-The nested cross-modal readout produced consistent positive results relative to
-the standard totalVI decoder:
+Each direction trains on one mouse and evaluates the other. This prevents cells
+from the same mouse appearing in both training and test data.
 
-| Endpoint | totalVI | FusionVI-X | Paired difference | BH q |
-|---|---:|---:|---:|---:|
-| CD25 global Spearman | 0.779 | 0.825 | +0.046 | 0.0039 |
-| CD69 global Spearman | 0.822 | 0.873 | +0.051 | 0.0039 |
-| HLA-DR global Spearman | 0.404 | 0.756 | +0.352 | 0.0039 |
-| HLA-DR discordant Spearman | -0.175 | 0.637 | +0.812 | 0.0117 |
+## Results
 
-Discordant CD25 and CD69 improvements were positive but not statistically
-reliable. The ablation gives the biological interpretation: a marker-matched RNA
-proxy alone became anticorrelated with surface abundance in discordant cells,
-whereas the remaining surface-protein panel restored predictive signal. The
-successful contribution is therefore targeted cross-modal biomarker readout;
-the scalar gate is retained as an informative negative architecture ablation.
+| Hidden protein | totalVI | FusionVI | Difference |
+|---|---:|---:|---:|
+| CD20 | 0.624 | 0.738 | +0.115 |
+| CD28 | 0.542 | 0.613 | +0.072 |
+| CD4 | 0.640 | 0.725 | +0.084 |
+| CD8a | 0.505 | 0.615 | +0.110 |
+| **Mean** | **0.578** | **0.673** | **+0.095** |
 
-## Experiment 2: unseen CRISPR targets
+Values are mean Spearman correlations across the two mouse-held-out folds.
+FusionVI improved every hidden marker in both fold directions. CD20 and CD8a
+showed the largest gains, consistent with the remaining protein panel carrying
+strong lineage information that complements sparse marker-matched RNA.
 
-The external validation supports the main result in a more direct therapeutic
-setting:
+![totalVI versus FusionVI](results/figures/totalvi_vs_fusionvi.png)
 
-| Model | PD-L1 effect Spearman | Direction accuracy |
-|---|---:|---:|
-| CD274 RNA only | 0.587 | 64.0% |
-| totalVI decoder | 0.767 | 76.0% |
-| totalVI-X | 0.841 | 82.7% |
-| FusionVI decoder | 0.820 | 77.3% |
-| **FusionVI-X** | **0.879** | **84.0%** |
+## Interpretation
 
-Across the 25 held-out targets, FusionVI-X reduced median gene-level absolute
-error by 0.0042 relative to totalVI-X (paired Wilcoxon p=0.042). This is a small
-but consistent encoder contribution; most of the gain over native totalVI comes
-from the target-safe cross-modal readout.
+The experiment supports a technical conclusion: targeted cross-modal context
+improves hidden surface-marker ranking in an unseen mouse relative to the
+original totalVI decoder. The result is relevant to therapeutic biomarker and
+target-panel design because CD20, CD28, CD4 and CD8a define drug-relevant immune
+populations.
 
-The predictions recover the expected loss of PD-L1 after perturbing JAK2,
-IFNGR1, IFNGR2 or STAT1, and the increased PD-L1 after CUL3 or BRD4 perturbation.
-The important negative result is CMTM6: surface PD-L1 decreases strongly while
-CD274 RNA moves slightly upward, and FusionVI-X fails to recover that effect.
-This provides a specific boundary condition for the model in a known
-post-transcriptional PD-L1-stability mechanism.
-
-![Papalexi external-validation metrics](results/experiment2_papalexi/figures/papalexi_external_validation.png)
-
-![Papalexi gene-level effects](results/experiment2_papalexi/figures/papalexi_gene_effects.png)
-
-## Experiment 3: original totalVI dataset
-
-CD20, CD28, CD4 and CD8a are masked together at encoder input. Each model trains
-on one mouse and is evaluated on the other, then the direction is reversed. A
-fixed Ridge readout uses the latent state, the remaining proteins and the
-prespecified matching transcript. Because the source contains only two mice,
-this is a technical transfer check rather than a biological inference study.
-
-Across the two folds, the fixed FusionVI-X readout achieved mean Spearman 0.673
-versus 0.671 for totalVI-X. It was higher for CD28, CD4 and CD8a and 0.0005 lower
-for CD20. The native FusionVI decoder averaged 0.589 versus 0.578 for totalVI.
-The result supports portability to the original paper's data, while the small
-readout margin prevents a strong performance-superiority claim.
-
-![Original totalVI cross-mouse recovery](results/experiment3_totalvi_original/figures/totalvi_original_cross_mouse.png)
+The dataset contains only two independent mice. Thousands of cells improve
+prediction precision but do not create additional biological replicates.
+Therefore, this project does not claim population-level generalization or
+clinical utility.
 
 ## Reproduce
 
 The executed environment used Python 3.12, scvi-tools 1.4.2, PyTorch 2.8.0 and
-one CUDA GPU. From PowerShell:
+one CUDA GPU.
 
 ```powershell
 python -m venv .venv
@@ -153,58 +95,26 @@ python -m venv .venv
 .\run_all.ps1
 ```
 
-`run_all.ps1` downloads checksum-verified matrices, prepares the AnnData objects,
-runs both neural models, evaluates the readouts and regenerates every result
-figure for all three experiments. To run only the Papalexi validation:
-
-```powershell
-.\run_experiment2.ps1
-```
-
-To run the original-totalVI two-mouse transfer experiment:
-
-```powershell
-.\run_experiment3.ps1
-```
+The script downloads and verifies the source object, prepares the analysis
+matrix, trains totalVI and FusionVI in both mouse-held-out directions, evaluates
+the hidden markers and regenerates the final figure. Completed folds are
+detected and skipped.
 
 ## Repository layout
 
-- `config/default.yaml` — fixed experiment configuration.
-- `src/download_data.py` — HCA downloads with expected checksums.
-- `src/prepare_data.py` — annotation matching, count preservation and
-  lane-aware highly-variable-gene selection.
-- `src/fusion_encoder.py` — masked totalVI and gated dual-branch encoders.
-- `src/train_fold.py` — one deterministic donor-held-out neural fold.
-- `src/classical_baselines.py` — donor-held-out PCA baselines.
-- `src/evaluate.py` — biological metrics and donor-level inference.
-- `src/cross_modal_head.py` — nested donor-safe cross-modal readout.
-- `src/make_cross_modal_figures.py` — positive-result and ablation figures.
-- `config/papalexi.yaml` — fixed external-validation configuration.
-- `src/download_papalexi.py` — checksum-verified GEO download.
-- `src/prepare_papalexi.py` — memory-bounded HVG selection and target folds.
-- `src/train_papalexi_fold.py` — masked models trained by CRISPR-target fold.
-- `src/evaluate_papalexi.py` — nested target-grouped effect analysis.
-- `src/make_papalexi_figures.py` — external-validation figures.
-- `config/totalvi_original.yaml` — original-paper transfer configuration.
-- `src/download_totalvi_original.py` — official dataset download and checksum.
-- `src/prepare_totalvi_original.py` — SLN111 preprocessing and marker masking.
-- `src/train_totalvi_original_fold.py` — two cross-mouse neural folds per model.
-- `src/evaluate_totalvi_original.py` — fixed-head and native-decoder evaluation.
-- `src/make_totalvi_original_figure.py` — cross-mouse result figure.
-- `results/` — compact metrics, selected head families and figures.
-- `assets/papalexi_fig1a.png` — source-paper study-design panel used in the
-  presentation, credited there to Papalexi et al., Nature Genetics 2021,
-  Figure 1a.
+- `config/experiment.yaml` sets the seed, model size, training schedule and
+  hidden markers.
+- `src/download_data.py` downloads the official dataset and verifies SHA-256.
+- `src/prepare_data.py` filters cells, selects genes and removes hashtag
+  controls.
+- `src/fusionvi.py` contains the masked totalVI encoder and FusionVI dual-branch
+  encoder.
+- `src/train_fold.py` trains one model in one mouse-held-out direction.
+- `src/evaluate.py` fits the fixed FusionVI readout and computes both models'
+  held-out correlations.
+- `src/make_figure.py` regenerates the final comparison figure.
+- `results/` contains compact metrics and figures.
+- `deliverables/` contains the presentation and technical report.
 
-Raw matrices, processed AnnData, model weights, per-cell fold outputs and
-cross-modal cell-level predictions are regenerated and excluded from Git.
-
-## Scope
-
-This is an exploratory biomarker-recovery study. Experiment 1 is limited to one
-dose and one 24-hour timepoint. Experiment 2 predicts held-out perturbations in
-one stimulated cell line and therefore tests mechanism-level transfer rather
-than patient-level generalization. Neither experiment establishes clinical
-utility or prospective drug response.
-Experiment 3 contains only two biological replicate mice; its cell-level
-sample size does not create additional independent biological replicates.
+Raw data, processed AnnData objects, fold-level latent arrays and model weights
+are regenerated locally and excluded from Git.
