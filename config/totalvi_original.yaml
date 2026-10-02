@@ -1,0 +1,12 @@
+project_seed: 2026
+n_latent: 15
+n_hidden: 128
+max_epochs: 25
+batch_size: 256
+early_stopping_patience: 5
+targets:
+  ADT_CD20_A0192: Ms4a1
+  ADT_CD28_A0204: Cd28
+  ADT_CD4_A0001: Cd4
+  ADT_CD8a_A0002: Cd8a
+

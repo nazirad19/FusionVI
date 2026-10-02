@@ -2,12 +2,14 @@
 
 FusionVI-X tests whether targeted cross-modal learning can recover hidden
 therapeutic surface biomarkers from paired single-cell RNA and protein data.
-It contains two complementary experiments:
+It contains three complementary experiments:
 
 1. **Lawlor PBMC stimulation:** can CD25, CD69 and HLA-DR be recovered in an
    unseen donor when RNA and protein disagree?
 2. **Papalexi ECCITE-seq:** can surface PD-L1 responses be predicted for an
    entirely unseen CRISPR target after IFN-gamma stimulation?
+3. **Original totalVI SLN111:** does the method transfer to the original
+   totalVI paper's mouse spleen/lymph-node data when an entire mouse is unseen?
 
 Together they ask:
 
@@ -21,6 +23,9 @@ The external validation uses the Papalexi et al. ECCITE-seq screen: 20,729
 IFN-gamma-treated THP-1 cells, 25 perturbed genes plus non-targeting controls,
 three biological replicates and four surface proteins. PD-L1 is hidden at model
 input and recovered from 2,000 RNA features plus CD86, PD-L2 and CD366.
+The technical transfer experiment uses the official SLN111 object from the
+totalVI reproducibility repository: 16,813 non-negative cells, 4,000 genes and
+110 proteins from two biological replicate mice.
 
 ## Method
 
@@ -121,6 +126,22 @@ post-transcriptional PD-L1-stability mechanism.
 
 ![Papalexi gene-level effects](results/experiment2_papalexi/figures/papalexi_gene_effects.png)
 
+## Experiment 3: original totalVI dataset
+
+CD20, CD28, CD4 and CD8a are masked together at encoder input. Each model trains
+on one mouse and is evaluated on the other, then the direction is reversed. A
+fixed Ridge readout uses the latent state, the remaining proteins and the
+prespecified matching transcript. Because the source contains only two mice,
+this is a technical transfer check rather than a biological inference study.
+
+Across the two folds, the fixed FusionVI-X readout achieved mean Spearman 0.673
+versus 0.671 for totalVI-X. It was higher for CD28, CD4 and CD8a and 0.0005 lower
+for CD20. The native FusionVI decoder averaged 0.589 versus 0.578 for totalVI.
+The result supports portability to the original paper's data, while the small
+readout margin prevents a strong performance-superiority claim.
+
+![Original totalVI cross-mouse recovery](results/experiment3_totalvi_original/figures/totalvi_original_cross_mouse.png)
+
 ## Reproduce
 
 The executed environment used Python 3.12, scvi-tools 1.4.2, PyTorch 2.8.0 and
@@ -133,11 +154,17 @@ python -m venv .venv
 ```
 
 `run_all.ps1` downloads checksum-verified matrices, prepares the AnnData objects,
-runs both neural models, evaluates the nested readouts and regenerates every
-result figure for both experiments. To run only the Papalexi validation:
+runs both neural models, evaluates the readouts and regenerates every result
+figure for all three experiments. To run only the Papalexi validation:
 
 ```powershell
 .\run_experiment2.ps1
+```
+
+To run the original-totalVI two-mouse transfer experiment:
+
+```powershell
+.\run_experiment3.ps1
 ```
 
 ## Repository layout
@@ -158,6 +185,12 @@ result figure for both experiments. To run only the Papalexi validation:
 - `src/train_papalexi_fold.py` — masked models trained by CRISPR-target fold.
 - `src/evaluate_papalexi.py` — nested target-grouped effect analysis.
 - `src/make_papalexi_figures.py` — external-validation figures.
+- `config/totalvi_original.yaml` — original-paper transfer configuration.
+- `src/download_totalvi_original.py` — official dataset download and checksum.
+- `src/prepare_totalvi_original.py` — SLN111 preprocessing and marker masking.
+- `src/train_totalvi_original_fold.py` — two cross-mouse neural folds per model.
+- `src/evaluate_totalvi_original.py` — fixed-head and native-decoder evaluation.
+- `src/make_totalvi_original_figure.py` — cross-mouse result figure.
 - `results/` — compact metrics, selected head families and figures.
 - `assets/papalexi_fig1a.png` — source-paper study-design panel used in the
   presentation, credited there to Papalexi et al., Nature Genetics 2021,
@@ -173,3 +206,5 @@ dose and one 24-hour timepoint. Experiment 2 predicts held-out perturbations in
 one stimulated cell line and therefore tests mechanism-level transfer rather
 than patient-level generalization. Neither experiment establishes clinical
 utility or prospective drug response.
+Experiment 3 contains only two biological replicate mice; its cell-level
+sample size does not create additional independent biological replicates.
