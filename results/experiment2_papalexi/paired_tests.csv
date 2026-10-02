@@ -1,0 +1,5 @@
+comparison,median_absolute_error_reduction,wilcoxon_statistic,p_value,n_targets
+context_no_latent vs totalvi_xmodal,-0.00949825840433327,73.0,0.014722049236297607,25
+fusionvi_xmodal vs totalvi_xmodal,0.004198113550762274,87.0,0.04215019941329956,25
+protein_context_only vs totalvi_xmodal,-0.00736660577769932,78.0,0.021908342838287354,25
+rna_proxy_only vs totalvi_xmodal,-0.026202076393662864,58.0,0.0037809014320373535,25

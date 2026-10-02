@@ -1,0 +1,54 @@
+{
+  "cells": 20729,
+  "genes": 2000,
+  "proteins": [
+    "CD86",
+    "PDL1",
+    "PDL2",
+    "CD366"
+  ],
+  "perturbation_targets": 25,
+  "negative_control_cells": 2386,
+  "replicates": {
+    "rep1": 9428,
+    "rep3": 6001,
+    "rep2": 5300
+  },
+  "fold_targets": {
+    "0": [
+      "CUL3",
+      "MYC",
+      "PDCD1LG2",
+      "SPI1",
+      "STAT2"
+    ],
+    "1": [
+      "BRD4",
+      "MARCH8",
+      "POU2F2",
+      "SMAD4",
+      "UBE2L6"
+    ],
+    "2": [
+      "ATF2",
+      "ETV7",
+      "IFNGR1",
+      "IFNGR2",
+      "STAT3"
+    ],
+    "3": [
+      "CAV1",
+      "CMTM6",
+      "IRF1",
+      "STAT5A",
+      "TNFRSF14"
+    ],
+    "4": [
+      "CD86",
+      "IRF7",
+      "JAK2",
+      "NFKBIA",
+      "STAT1"
+    ]
+  }
+}
