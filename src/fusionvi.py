@@ -59,7 +59,13 @@ class MaskedJointEncoderTOTALVI(nn.Module):
 
 
 class FusionVIEncoder(nn.Module):
-    """Separate RNA/protein branches joined by a cell-specific fusion gate."""
+    """Separate branches with a gate that respects protein-panel availability.
+
+    The learned gate is used when protein measurements are present.  When a
+    cell has no measured proteins, fusion is forced to the RNA branch.  This
+    prevents an all-zero placeholder panel, together with encoder biases and a
+    batch covariate, from contributing a spurious protein representation.
+    """
 
     def __init__(
         self,
@@ -113,7 +119,9 @@ class FusionVIEncoder(nn.Module):
         protein = protein * self.protein_input_mask
         h_rna = self.rna_encoder(rna, *cat_list)
         h_protein = self.protein_encoder(protein, *cat_list)
-        gate = self.gate(torch.cat((h_rna, h_protein), dim=-1))
+        learned_gate = self.gate(torch.cat((h_rna, h_protein), dim=-1))
+        protein_available = (protein.sum(dim=-1, keepdim=True) > 0).to(h_rna.dtype)
+        gate = 1.0 - protein_available * (1.0 - learned_gate)
         return h_rna, h_protein, gate
 
     def forward(self, data: torch.Tensor, *cat_list: int):
