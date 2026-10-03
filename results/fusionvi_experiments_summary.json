@@ -1,0 +1,74 @@
+{
+  "experiments": [
+    {
+      "id": 1,
+      "name": "Lawlor donor-held-out stimulation and marker recovery",
+      "dataset": "Lawlor et al. PBMC CITE-seq",
+      "cells": 16382,
+      "genes": 4000,
+      "proteins": 39,
+      "biological_replicates": 10,
+      "design": "Ten-fold leave-one-donor-out validation across baseline, LPS and anti-CD3/CD28 conditions",
+      "targets": ["CD25 in T cells", "CD69 in T cells", "HLA-DR in monocytes"],
+      "native_totalvi_spearman": [0.77880206598954, 0.8218055911586845, 0.40407196888638175],
+      "native_fusionvi_spearman": [0.7786645460664713, 0.8263259940265204, 0.42148885184106255],
+      "totalvi_xmodal_spearman": [0.8280477990039211, 0.8741479617214123, 0.7431395126812365],
+      "fusionvi_xmodal_spearman": [0.8249359220981933, 0.8732223214003291, 0.7560572573132112],
+      "conclusion": "The encoder change alone produced small, inconsistent differences. The donor-safe cross-modal readout recovered hidden markers substantially better than either native decoder, but totalVI-X and FusionVI-X were nearly tied. The useful signal came mainly from targeted cross-modal context."
+    },
+    {
+      "id": 2,
+      "name": "Papalexi unseen CRISPR-target PD-L1 prediction",
+      "dataset": "Papalexi et al. ECCITE-seq",
+      "cells": 20729,
+      "genes": 2000,
+      "proteins": 4,
+      "perturbation_targets": 25,
+      "biological_replicates": 3,
+      "design": "Five-fold leave-CRISPR-targets-out validation with 75 target-by-replicate effects",
+      "metrics": {
+        "cd274_rna_only": {"effect_spearman": 0.5871408250355619, "direction_accuracy": 0.64},
+        "totalvi_decoder": {"effect_spearman": 0.7668563300142247, "direction_accuracy": 0.76},
+        "fusionvi_decoder": {"effect_spearman": 0.8198577524893313, "direction_accuracy": 0.7733333333333333},
+        "totalvi_xmodal": {"effect_spearman": 0.8413940256045519, "direction_accuracy": 0.8266666666666667, "effect_mae": 0.08535554911827098},
+        "fusionvi_xmodal": {"effect_spearman": 0.8794025604551919, "direction_accuracy": 0.84, "effect_mae": 0.08107690782719398}
+      },
+      "paired_gene_test": {"median_absolute_error_reduction": 0.004198113550762274, "p_value": 0.04215019941329956, "n_targets": 25},
+      "conclusion": "FusionVI-X ranked unseen perturbation effects best and recovered expected IFNGR1, IFNGR2, JAK2 and STAT1 losses. It failed on CMTM6, a post-transcriptional PD-L1 stability mechanism, which defines a biologically meaningful limitation."
+    },
+    {
+      "id": 3,
+      "name": "Original totalVI dataset targeted marker transfer",
+      "dataset": "SLN111 mouse spleen and lymph-node CITE-seq",
+      "cells": 16813,
+      "genes": 4000,
+      "proteins": 110,
+      "biological_replicates": 2,
+      "design": "Two-fold leave-one-mouse-out validation with CD20, CD28, CD4 and CD8a masked together",
+      "native_totalvi_mean_spearman": 0.5776781249834003,
+      "native_fusionvi_mean_spearman": 0.5892704462970558,
+      "totalvi_xmodal_mean_spearman": 0.6713423489362547,
+      "fusionvi_xmodal_mean_spearman": 0.6727509611311373,
+      "conclusion": "FusionVI modestly improved the native decoder, while the fixed cross-modal readouts were essentially tied. With only two mice this is a technical transfer result, not population-level evidence."
+    },
+    {
+      "id": 4,
+      "name": "Paper-aligned full missing-protein-panel benchmark",
+      "dataset": "SLN111 object used in totalVI Figure 3",
+      "cells": 16828,
+      "genes": 4005,
+      "proteins": 110,
+      "paired_initializations": 4,
+      "design": "SLN111-D1 retains RNA and proteins; the entire SLN111-D2 protein panel is hidden during training",
+      "totalvi_mean_rmsle": 1.0604511022304668,
+      "fusionvi_mean_rmsle": 1.054431601480933,
+      "fusionvi_minus_totalvi_rmsle": -0.006019500749533893,
+      "proteins_fusionvi_better": 74,
+      "proteins_compared": 110,
+      "protein_level_wilcoxon_p": 1.0368908206536914e-05,
+      "totalvi_parameters": 4574975,
+      "fusionvi_parameters": 2971904,
+      "conclusion": "The missingness-aware FusionVI encoder reduced RMSLE by 0.57% and used 35% fewer parameters. Correlation metrics were slightly lower, so the supported claim is lower reconstruction error rather than universal superiority."
+    }
+  ]
+}
