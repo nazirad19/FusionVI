@@ -205,8 +205,8 @@ def main() -> None:
         [
             ["Lawlor activation", "10 human donors", "Native encoders close; cross-modal context supplied most of the marker-recovery gain"],
             ["Papalexi PD-L1", "25 CRISPR targets", "FusionVI-X reached 0.879 effect Spearman and 84.0% direction accuracy"],
-            ["SLN111 targeted markers", "2 mice", "Native FusionVI improved modestly; fixed cross-modal readouts were nearly tied"],
-            ["SLN111 complete panel", "4 paired seeds", "RMSLE 1.0605 to 1.0544 with 35% fewer parameters"],
+            ["SLN111 targeted markers", "2 mice", "Protein context + RNA reached 0.670; either latent added no more than 0.003"],
+            ["SLN111 complete panel", "4 paired seeds", "RMSLE difference -0.0060; seed-level 95% CI crossed zero"],
         ],
         [1.55, 1.35, 3.85],
     )
@@ -295,14 +295,16 @@ def main() -> None:
         [
             ["Native decoder mean Spearman", f"{targeted['native_totalvi_mean_spearman']:.3f}", f"{targeted['native_fusionvi_mean_spearman']:.3f}", f"{targeted['native_fusionvi_mean_spearman']-targeted['native_totalvi_mean_spearman']:+.3f}"],
             ["Fixed cross-modal mean Spearman", f"{targeted['totalvi_xmodal_mean_spearman']:.3f}", f"{targeted['fusionvi_xmodal_mean_spearman']:.3f}", f"{targeted['fusionvi_xmodal_mean_spearman']-targeted['totalvi_xmodal_mean_spearman']:+.3f}"],
+            ["Protein context + matching RNA", f"{targeted['protein_context_plus_rna_mean_spearman']:.3f}", f"{targeted['protein_context_plus_rna_mean_spearman']:.3f}", "shared baseline"],
         ],
         [3.10, 1.20, 1.20, 1.20],
     )
-    add_result_lead(doc, "Result  Native FusionVI improved modestly; the fixed cross-modal readouts were effectively tied.")
+    add_result_lead(doc, "Result  Most cross-mouse performance came from measured protein context, not either latent.")
     doc.add_paragraph(
-        "This corrects an earlier summary that compared FusionVI-X with native totalVI. The fair comparisons are native against native "
-        "and X-readout against X-readout. Because the dataset contains only two mice, it supports technical transfer rather than a "
-        "population-level biological claim."
+        f"The remaining 106 proteins plus matching transcript reached {targeted['protein_context_plus_rna_mean_spearman']:.3f}. "
+        f"Adding totalVI or FusionVI latents changed mean Spearman by only {targeted['totalvi_latent_increment']:.3f} and "
+        f"{targeted['fusionvi_latent_increment']:.3f}. Because the dataset contains only two mice, it supports technical transfer "
+        "rather than a population-level biological claim."
     )
     add_figure(doc, ROOT / "results" / "figures" / "totalvi_original_marker_recovery.png", "Figure 3. Hidden-marker recovery across the two mouse-held-out directions.", 6.60)
 
@@ -324,24 +326,26 @@ def main() -> None:
         ],
         [2.45, 1.40, 1.40, 1.45],
     )
-    add_result_lead(doc, f"Result  FusionVI reduced mean RMSLE by {relative:.2f}% with {parameter_reduction:.1f}% fewer parameters.")
+    add_result_lead(doc, f"Result  FusionVI's mean RMSLE was {relative:.2f}% lower, but the seed-level interval included zero.")
     doc.add_paragraph(
-        f"FusionVI had lower RMSLE for {paper['proteins_fusionvi_better']} of {paper['proteins_compared']} proteins. The paired "
-        f"protein-level Wilcoxon p-value was {paper['protein_level_wilcoxon_p']:.3g}; it is descriptive because proteins and seeds "
-        "are algorithmic units rather than independent biological cohorts. MAE improved, while rank and linear correlations were "
-        "slightly lower. The supported claim is lower reconstruction error, not universal metric superiority."
+        f"The seed-paired difference was {paper['fusionvi_minus_totalvi_rmsle']:+.4f} (95% CI "
+        f"{paper['seed_level_rmsle_ci95'][0]:+.4f} to {paper['seed_level_rmsle_ci95'][1]:+.4f}; paired t p="
+        f"{paper['seed_level_paired_t_p']:.2f}; exact p={paper['seed_level_exact_p']:.2f}). Three of four seeds favored FusionVI. "
+        f"The protein-level p={paper['protein_level_wilcoxon_p']:.3g} is descriptive because proteins are repeated outcomes. "
+        f"The {parameter_reduction:.1f}% parameter difference mostly reflects width 128 versus 256 and removal of totalVI's "
+        "separate library encoder. Same-width, parameter-matched and missingness-aware controls are required to isolate fusion."
     )
     add_figure(doc, ROOT / "results" / "figures" / "paper_benchmark_totalvi_vs_fusionvi.png", "Figure 4. Paired seeds, per-protein RMSLE and paired protein differences.", 6.70)
 
     doc.add_page_break()
     doc.add_heading("Combined interpretation", level=1)
     doc.add_paragraph(
-        "The experiments support a narrow and biologically coherent contribution. Separating modality encoders can help when the "
-        "test condition creates a true modality-availability shift. When other proteins remain available, a donor- or target-safe "
-        "cross-modal readout often contributes more than the encoder itself. The Papalexi result further shows that multimodal context "
+        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment suggests a small "
+        "candidate benefit, but four seeds and unequal capacity do not yet identify gated fusion as its cause. When other proteins remain "
+        "available, measured protein context often contributes more than the learned latent. The Papalexi result shows that multimodal context "
         "can rank unseen PD-L1 perturbation effects, while the CMTM6 failure exposes a post-transcriptional boundary."
     )
-    add_bullet(doc, "Positive result: lower full-panel reconstruction error with fewer parameters.")
+    add_bullet(doc, "Candidate result: lower mean full-panel reconstruction error, with uncertainty spanning zero.")
     add_bullet(doc, "Positive result: improved ranking and direction of unseen PD-L1 perturbation effects.")
     add_bullet(doc, "Negative result: the encoder alone did not consistently improve donor-held-out marker recovery.")
     add_bullet(doc, "Boundary condition: RNA-centered evidence can fail for protein-stability mechanisms such as CMTM6.")
@@ -355,6 +359,8 @@ def main() -> None:
     add_bullet(doc, "Papalexi: one IFN-gamma-treated cell line and 25 molecular perturbations.")
     add_bullet(doc, "Targeted SLN111 transfer: two mice, sufficient only for a technical check.")
     add_bullet(doc, "Complete-panel benchmark: one source-target batch pair and four seeds rather than the paper's 30.")
+    add_bullet(doc, "The original complete-panel comparison differs in encoder width and library-network design; control arms are running.")
+    add_bullet(doc, "Seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.")
     add_bullet(doc, "Native and X-readout results are separated throughout the report.")
     add_bullet(doc, "Consolidated metrics are stored in results/fusionvi_experiments_summary.json.")
     doc.add_paragraph(

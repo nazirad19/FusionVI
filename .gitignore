@@ -10,6 +10,7 @@ results/final_folds/
 results/paper_benchmark_runs/
 results/paper_benchmark_runs_archive/
 results/smoke_runs/
+results/control_logs/
 results/experiment2_papalexi/
 results/experiment3_totalvi_original/
 results/cross_modal_head_predictions.csv

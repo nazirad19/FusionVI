@@ -49,7 +49,11 @@
       "native_fusionvi_mean_spearman": 0.5892704462970558,
       "totalvi_xmodal_mean_spearman": 0.6713423489362547,
       "fusionvi_xmodal_mean_spearman": 0.6727509611311373,
-      "conclusion": "FusionVI modestly improved the native decoder, while the fixed cross-modal readouts were essentially tied. With only two mice this is a technical transfer result, not population-level evidence."
+      "protein_context_mean_spearman": 0.6686,
+      "protein_context_plus_rna_mean_spearman": 0.6698,
+      "totalvi_latent_increment": 0.0015,
+      "fusionvi_latent_increment": 0.003,
+      "conclusion": "The X readouts were essentially tied and added at most 0.003 Spearman beyond a ridge model using the remaining protein panel and matching transcript. With only two mice this is a technical transfer result, not population-level evidence."
     },
     {
       "id": 4,
@@ -66,9 +70,14 @@
       "proteins_fusionvi_better": 74,
       "proteins_compared": 110,
       "protein_level_wilcoxon_p": 1.0368908206536914e-05,
+      "seed_level_rmsle_ci95": [-0.0176399066500363, 0.005600905150968409],
+      "seed_level_paired_t_p": 0.19780100972610146,
+      "seed_level_exact_p": 0.25,
+      "seeds_favouring_fusionvi": 3,
+      "seeds_for_80pct_power": 14,
       "totalvi_parameters": 4574975,
       "fusionvi_parameters": 2971904,
-      "conclusion": "The missingness-aware FusionVI encoder reduced RMSLE by 0.57% and used 35% fewer parameters. Correlation metrics were slightly lower, so the supported claim is lower reconstruction error rather than universal superiority."
+      "conclusion": "FusionVI's mean RMSLE was 0.57% lower, but the seed-level 95% interval included zero (p=0.20). The 35% parameter difference is primarily explained by a narrower encoder and removal of totalVI's separate library encoder, so controlled width, parameter-count and missingness-aware baselines are required before attributing the difference to fusion."
     }
   ]
 }

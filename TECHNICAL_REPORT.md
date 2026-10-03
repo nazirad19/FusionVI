@@ -12,8 +12,8 @@ FusionVI replaces totalVI's joint encoder with separate RNA and protein branches
 |---|---|---|---|
 | 1. Donor-held-out activation | Lawlor PBMC CITE-seq; 10 donors | Can hidden CD25, CD69 and HLA-DR be recovered in an unseen donor, including RNA-protein-discordant cells? | Native encoders were close; a donor-safe cross-modal readout provided most of the gain. |
 | 2. Unseen perturbations | Papalexi ECCITE-seq; 25 CRISPR targets | Can PD-L1 protein effects be predicted for a perturbation absent from training? | FusionVI-X achieved effect Spearman 0.879 and 84.0% direction accuracy. |
-| 3. Targeted cross-mouse transfer | Original totalVI SLN111; 2 mice | Can four hidden immune markers be transferred to an unseen mouse? | Native FusionVI improved mean Spearman from 0.578 to 0.589; fixed cross-modal readouts were nearly tied. |
-| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 4 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI reduced RMSLE from 1.0605 to 1.0544. |
+| 3. Targeted cross-mouse transfer | Original totalVI SLN111; 2 mice | Can four hidden immune markers be transferred to an unseen mouse? | A latent-free protein-context baseline reached 0.670; adding either latent changed Spearman by no more than 0.003. |
+| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 4 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI's mean RMSLE was 0.0060 lower, but the seed-level 95% CI crossed zero. |
 
 ## Method
 
@@ -61,8 +61,9 @@ The official SLN111 object contains 16,813 mouse spleen and lymph-node cells, 4,
 |---|---:|---:|---:|
 | Native decoder mean Spearman | 0.578 | 0.589 | +0.012 |
 | Fixed cross-modal readout mean Spearman | 0.671 | 0.673 | +0.001 |
+| Latent-free protein context + RNA | 0.670 | 0.670 | shared baseline |
 
-The native FusionVI decoder improved modestly. FusionVI-X and totalVI-X were effectively tied, confirming that the fixed readout contributed most of the targeted-marker performance. Two mice support only a technical transfer conclusion.
+The native FusionVI decoder improved modestly, but the latent-free control changes the interpretation. The remaining 106 proteins plus the matching transcript reached 0.670; totalVI-X and FusionVI-X added only 0.002 and 0.003, respectively. Most cross-mouse performance came from measured protein context rather than either learned latent. Two mice support only a technical transfer conclusion.
 
 ![Original totalVI targeted marker recovery](results/figures/totalvi_original_marker_recovery.png)
 
@@ -76,7 +77,9 @@ This experiment follows the totalVI paper's Figure 3 missing-protein test. SLN11
 | Proteins with lower RMSLE | — | 74/110 | — |
 | Trainable parameters | 4,574,975 | 2,971,904 | 35.0% fewer |
 
-FusionVI reduced RMSLE by 0.57%. The paired protein-level Wilcoxon p-value was 1.04e-05; it is descriptive because proteins and random seeds are algorithmic benchmark units rather than independent biological cohorts. MAE also improved, while Spearman and Pearson correlations were slightly lower. The supported claim is therefore lower reconstruction error with fewer parameters.
+FusionVI's average RMSLE was 0.57% lower, but the random initialization is the valid replication unit. The paired seed difference was -0.0060 (95% CI -0.0176 to +0.0056; paired t p=0.20; exact sign-flip p=0.25). Three of four seeds favored FusionVI, and approximately 14 paired seeds are needed for 80% power at the observed effect. The much smaller protein-level Wilcoxon p-value (1.04e-05) is descriptive because proteins are repeated outcomes inside each seed.
+
+The architecture comparison is also capacity-confounded: totalVI used width 256, FusionVI branches used width 128, and FusionVI reused its RNA branch for library size rather than retaining totalVI's second encoder. These implementation choices explain most of the 35.0% parameter difference. Same-width, parameter-matched and missing-panel-aware joint-encoder controls are therefore part of the confirmatory benchmark; until those runs finish, the result is evidence of a small candidate effect rather than proof that gated fusion is better.
 
 ![Paper-aligned complete-panel benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
 
@@ -84,8 +87,8 @@ FusionVI reduced RMSLE by 0.57%. The paired protein-level Wilcoxon p-value was 1
 
 The four experiments do not support a blanket claim that FusionVI is always superior. They support three narrower conclusions:
 
-1. Separating modality encoders can help when the test condition contains a real modality-availability shift, as in the complete missing-panel benchmark.
-2. A leakage-safe cross-modal readout is more important than the encoder choice for targeted marker recovery when other proteins remain measured.
+1. The complete missing-panel benchmark suggests a small reconstruction benefit, but four seeds and unequal model capacity do not yet identify gated fusion as its cause.
+2. For targeted cross-mouse marker recovery, measured protein context is more important than either learned latent representation.
 3. Multimodal context improves prediction of unseen PD-L1 perturbation effects, but post-transcriptional mechanisms such as CMTM6 remain difficult when RNA and surface protein move in opposite directions.
 
 These results are relevant to therapeutic discovery as a biomarker-completion and perturbation-ranking study. They do not establish clinical utility, patient-level generalization or replacement of prospective protein measurements.
@@ -96,6 +99,8 @@ These results are relevant to therapeutic discovery as a biomarker-completion an
 - Experiment 2 uses one IFN-gamma-treated cell line; it tests mechanism-level transfer rather than patient response.
 - Experiment 3 has only two mice and should be treated as a technical replication.
 - Experiment 4 covers one source-target batch pair and four seeds rather than the paper's 30 initializations.
+- Experiment 4 seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.
+- The original Experiment 4 comparison differs in encoder width and library-network design. `run_controls.ps1` executes the prespecified capacity and missingness controls.
 - Native-decoder and cross-modal-readout results are never pooled because they measure different contributions.
 - `results/fusionvi_experiments_summary.json` records the consolidated metrics used in this report.
 - `run_paper_benchmark.ps1` reproduces the current full-panel benchmark. Historical experiment outputs remain traceable in the repository history.
