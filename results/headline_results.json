@@ -1,0 +1,10 @@
+{
+  "evaluation": "two-fold leave-one-mouse-out",
+  "targets": 4,
+  "independent_biological_replicates": 2,
+  "total_cells": 16813,
+  "totalVI_mean_fold_spearman": 0.5776781249834003,
+  "FusionVI_mean_fold_spearman": 0.6727509611311373,
+  "absolute_difference": 0.09507283614773698,
+  "interpretation": "FusionVI recovered hidden surface-marker rankings more accurately in both mouse-held-out directions. Two mice support a technical transfer result, not population-level inference."
+}
