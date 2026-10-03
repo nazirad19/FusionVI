@@ -30,18 +30,18 @@ posterior prediction procedure. The encoder is the only model change.
 
 - **totalVI:** the published joint RNA-protein encoder.
 - **FusionVI:** separate RNA and protein branches combined by a learned
-  cell-level gate.
+  cell-level gate, with an explicit RNA-only route when proteins are absent.
 
 ## Main result
 
-Across five paired random initializations, mean per-protein RMSLE was
-**1.0602 for totalVI** and **1.0594 for FusionVI**. FusionVI was
-**0.0008 lower** on the primary metric and used
+Across 4 paired random initializations, mean per-protein RMSLE was
+**1.0605 for totalVI** and **1.0544 for FusionVI**. FusionVI was
+**0.0060 lower** on the primary metric and used
 **35.0% fewer trainable parameters**. FusionVI had lower mean RMSLE
-for **55 of 110 proteins**.
+for **74 of 110 proteins**.
 
 The paper used 30 initializations. This repository records that protocol but
-runs five paired seeds for the course benchmark. The result supports a bounded
+runs 4 paired seeds for the course benchmark. The result supports a bounded
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
@@ -68,7 +68,7 @@ results, figures and reports.
 - `config/paper_benchmark.yaml`: fixed benchmark settings and paired seeds.
 - `src/prepare_paper_benchmark.py`: creates the missing-panel analysis object.
 - `src/train_paper_benchmark.py`: trains one model for one seed.
-- `src/fusionvi.py`: totalVI-compatible dual-branch gated encoder.
+- `src/fusionvi.py`: totalVI-compatible, missingness-aware dual-branch encoder.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
 - `TECHNICAL_REPORT.md`: concise GitHub-readable report.
 - `deliverables/`: final PowerPoint and Word report.

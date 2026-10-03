@@ -7,7 +7,7 @@ if (-not (Test-Path $python)) { throw 'Create .venv and install requirements.txt
 
 & $python (Join-Path $PSScriptRoot 'src\download_data.py')
 & $python (Join-Path $PSScriptRoot 'src\prepare_paper_benchmark.py')
-$seeds = 2026..2030
+$seeds = 2026..2029
 foreach ($seed in $seeds) {
     foreach ($model in @('totalvi', 'fusionvi')) {
         & $python (Join-Path $PSScriptRoot 'src\train_paper_benchmark.py') --model $model --seed $seed

@@ -18,5 +18,4 @@ executed_seeds:
   - 2027
   - 2028
   - 2029
-  - 2030
 primary_metric: RMSLE on log1p protein abundance

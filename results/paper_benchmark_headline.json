@@ -2,27 +2,27 @@
   "paper_experiment": "totalVI Figure 3 missing-protein imputation",
   "metric": "RMSLE on log1p protein abundance",
   "paper_protocol_initializations": 30,
-  "completed_totalvi_initializations": 5,
-  "completed_fusionvi_initializations": 5,
-  "totalvi_mean_rmsle": 1.0601563486972252,
-  "fusionvi_mean_rmsle": 1.0594002910088796,
-  "fusionvi_minus_totalvi_rmsle": -0.0007560576883458328,
-  "proteins_fusionvi_better": 55,
+  "completed_totalvi_initializations": 4,
+  "completed_fusionvi_initializations": 4,
+  "totalvi_mean_rmsle": 1.0604511022304668,
+  "fusionvi_mean_rmsle": 1.054431601480933,
+  "fusionvi_minus_totalvi_rmsle": -0.006019500749533893,
+  "proteins_fusionvi_better": 74,
   "proteins_compared": 110,
-  "protein_level_paired_wilcoxon_p": 0.30282911586855576,
+  "protein_level_paired_wilcoxon_p": 1.0368908206536914e-05,
   "all_completed_seeds_favor_fusionvi": false,
-  "totalvi_mean_mae_log1p": 0.930391072243857,
-  "fusionvi_mean_mae_log1p": 0.9290392273458555,
-  "fusionvi_minus_totalvi_mae_log1p": -0.001351844898001442,
-  "totalvi_mean_mae_raw": 34.69972269040778,
-  "fusionvi_mean_mae_raw": 34.029537535744126,
-  "fusionvi_minus_totalvi_mae_raw": -0.6701851546636561,
-  "totalvi_mean_spearman": 0.32556800854192774,
-  "fusionvi_mean_spearman": 0.3264914303752638,
-  "fusionvi_minus_totalvi_spearman": 0.0009234218333360467,
-  "totalvi_mean_pearson_log1p": 0.45533765413481675,
-  "fusionvi_mean_pearson_log1p": 0.45361741282972384,
-  "fusionvi_minus_totalvi_pearson_log1p": -0.0017202413050929066,
+  "totalvi_mean_mae_log1p": 0.930729883674197,
+  "fusionvi_mean_mae_log1p": 0.9242437846546918,
+  "fusionvi_minus_totalvi_mae_log1p": -0.006486099019505143,
+  "totalvi_mean_mae_raw": 34.714908048765935,
+  "fusionvi_mean_mae_raw": 34.15867151352389,
+  "fusionvi_minus_totalvi_mae_raw": -0.5562365352420429,
+  "totalvi_mean_spearman": 0.325660028897698,
+  "fusionvi_mean_spearman": 0.32484155607013415,
+  "fusionvi_minus_totalvi_spearman": -0.0008184728275638653,
+  "totalvi_mean_pearson_log1p": 0.4553495935548555,
+  "fusionvi_mean_pearson_log1p": 0.45299181238111746,
+  "fusionvi_minus_totalvi_pearson_log1p": -0.002357781173738027,
   "interpretation_limit": "Proteins and random initializations are algorithmic benchmark units, not independent biological cohorts.",
   "completed_runs": [
     {
@@ -62,58 +62,44 @@
       "median_protein_rmsle": 1.0813289870617275
     },
     {
-      "model": "totalVI",
-      "seed": 2030,
-      "configured_max_epochs": 500,
-      "epochs_completed": 485,
-      "trainable_parameters": 4574975,
-      "mean_protein_rmsle": 1.05897733456426,
-      "median_protein_rmsle": 1.0792184172097075
-    },
-    {
       "model": "FusionVI",
+      "encoder_variant": "missingness_aware_dual_branch_gate",
       "seed": 2026,
-      "configured_max_epochs": 500,
-      "epochs_completed": 376,
-      "trainable_parameters": 2971904,
-      "mean_protein_rmsle": 1.0644534959685295,
-      "median_protein_rmsle": 1.0834700593257585
-    },
-    {
-      "model": "FusionVI",
-      "seed": 2027,
-      "configured_max_epochs": 500,
-      "epochs_completed": 479,
-      "trainable_parameters": 2971904,
-      "mean_protein_rmsle": 1.0560291088767306,
-      "median_protein_rmsle": 1.0774563809755398
-    },
-    {
-      "model": "FusionVI",
-      "seed": 2028,
-      "configured_max_epochs": 500,
-      "epochs_completed": 500,
-      "trainable_parameters": 2971904,
-      "mean_protein_rmsle": 1.0560100489017143,
-      "median_protein_rmsle": 1.0782437601791086
-    },
-    {
-      "model": "FusionVI",
-      "seed": 2029,
-      "configured_max_epochs": 500,
-      "epochs_completed": 447,
-      "trainable_parameters": 2971904,
-      "mean_protein_rmsle": 1.0628351494837969,
-      "median_protein_rmsle": 1.0859000180070244
-    },
-    {
-      "model": "FusionVI",
-      "seed": 2030,
       "configured_max_epochs": 500,
       "epochs_completed": 494,
       "trainable_parameters": 2971904,
-      "mean_protein_rmsle": 1.057673651813627,
-      "median_protein_rmsle": 1.0789988788000289
+      "mean_protein_rmsle": 1.0482432699101614,
+      "median_protein_rmsle": 1.0745898655382233
+    },
+    {
+      "model": "FusionVI",
+      "encoder_variant": "missingness_aware_dual_branch_gate",
+      "seed": 2027,
+      "configured_max_epochs": 500,
+      "epochs_completed": 437,
+      "trainable_parameters": 2971904,
+      "mean_protein_rmsle": 1.0619462293267856,
+      "median_protein_rmsle": 1.0827056977097942
+    },
+    {
+      "model": "FusionVI",
+      "encoder_variant": "missingness_aware_dual_branch_gate",
+      "seed": 2028,
+      "configured_max_epochs": 500,
+      "epochs_completed": 467,
+      "trainable_parameters": 2971904,
+      "mean_protein_rmsle": 1.052183294096792,
+      "median_protein_rmsle": 1.0786746428009073
+    },
+    {
+      "model": "FusionVI",
+      "encoder_variant": "missingness_aware_dual_branch_gate",
+      "seed": 2029,
+      "configured_max_epochs": 500,
+      "epochs_completed": 474,
+      "trainable_parameters": 2971904,
+      "mean_protein_rmsle": 1.0553536125899927,
+      "median_protein_rmsle": 1.0777572060804366
     }
   ]
 }

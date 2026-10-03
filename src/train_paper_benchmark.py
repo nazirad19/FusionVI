@@ -87,7 +87,9 @@ def main() -> None:
         check_val_every_n_epoch=1,
         reduce_lr_on_plateau=True,
         adversarial_classifier=True,
-        datasplitter_kwargs={"num_workers": 4, "persistent_workers": True, "pin_memory": True},
+        # Worker spawning is unreliable in long Windows runs; zero workers is
+        # slower but leaves the model, batches and optimization unchanged.
+        datasplitter_kwargs={"num_workers": 0, "pin_memory": True},
         enable_progress_bar=True,
     )
 
@@ -132,6 +134,7 @@ def main() -> None:
     torch.save(model.module.state_dict(), MODELS / f"{run_name}.pt")
     result = {
         "model": "totalVI" if args.model == "totalvi" else "FusionVI",
+        "encoder_variant": "published_joint" if args.model == "totalvi" else "missingness_aware_dual_branch_gate",
         "seed": args.seed,
         "configured_max_epochs": effective_max_epochs,
         "epochs_completed": int(model.history["elbo_train"].shape[0]),

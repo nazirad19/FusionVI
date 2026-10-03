@@ -24,6 +24,7 @@ def main() -> None:
     fusion = headline["fusionvi_mean_rmsle"]
     delta = headline["fusionvi_minus_totalvi_rmsle"]
     relative = 100.0 * (total - fusion) / total
+    n_seeds = headline["completed_fusionvi_initializations"]
     if delta < -0.005:
         primary_statement = f"FusionVI reduced mean RMSLE by {abs(delta):.4f} ({relative:.2f}%)."
     elif delta > 0.005:
@@ -59,9 +60,9 @@ We used the processed SLN111 spleen and lymph-node CITE-seq object released with
 
 **totalVI baseline.** The current scvi-tools implementation uses the paper's joint RNA-protein encoder, 20-dimensional latent state, negative-binomial gene likelihood and background-aware protein likelihood.
 
-**FusionVI.** FusionVI changes only the encoder. Separate RNA and protein branches feed a learned cell-specific gate before the same latent state and native totalVI decoder. The benchmark version has 2.97 million trainable parameters, compared with 4.57 million for totalVI.
+**FusionVI.** FusionVI changes only the encoder. Separate RNA and protein branches feed a learned cell-specific gate; when the protein panel is absent, an explicit availability rule routes the cell through the RNA branch. The same latent state and native totalVI decoder are retained. The benchmark version has 2.97 million trainable parameters, compared with 4.57 million for totalVI.
 
-Both models use learning rate 0.004, batch size 256, a maximum of 500 epochs, validation-based early stopping with patience 45 and 25 posterior samples for prediction. We executed five paired random initializations. The paper used 30 initializations, so this is a course-scale paper-aligned reproduction rather than an exact replication of its uncertainty analysis.
+Both models use learning rate 0.004, batch size 256, a maximum of 500 epochs, validation-based early stopping with patience 45 and 25 posterior samples for prediction. We executed {n_seeds} paired random initializations. The paper used 30 initializations, so this is a course-scale paper-aligned reproduction rather than an exact replication of its uncertainty analysis.
 
 ## Evaluation
 

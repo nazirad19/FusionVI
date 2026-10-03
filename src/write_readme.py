@@ -17,6 +17,7 @@ def main() -> None:
     relation = "lower" if delta < 0 else "higher"
     params = {r["model"]: r["trainable_parameters"] for r in h["completed_runs"]}
     reduction = 100 * (params["totalVI"] - params["FusionVI"]) / params["totalVI"]
+    n_seeds = h["completed_fusionvi_initializations"]
     readme = f"""# FusionVI
 
 FusionVI is a controlled comparison with the published totalVI architecture on
@@ -49,18 +50,18 @@ posterior prediction procedure. The encoder is the only model change.
 
 - **totalVI:** the published joint RNA-protein encoder.
 - **FusionVI:** separate RNA and protein branches combined by a learned
-  cell-level gate.
+  cell-level gate, with an explicit RNA-only route when proteins are absent.
 
 ## Main result
 
-Across five paired random initializations, mean per-protein RMSLE was
+Across {n_seeds} paired random initializations, mean per-protein RMSLE was
 **{total:.4f} for totalVI** and **{fusion:.4f} for FusionVI**. FusionVI was
 **{abs(delta):.4f} {relation}** on the primary metric and used
 **{reduction:.1f}% fewer trainable parameters**. FusionVI had lower mean RMSLE
 for **{h['proteins_fusionvi_better']} of {h['proteins_compared']} proteins**.
 
 The paper used 30 initializations. This repository records that protocol but
-runs five paired seeds for the course benchmark. The result supports a bounded
+runs {n_seeds} paired seeds for the course benchmark. The result supports a bounded
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
@@ -87,7 +88,7 @@ results, figures and reports.
 - `config/paper_benchmark.yaml`: fixed benchmark settings and paired seeds.
 - `src/prepare_paper_benchmark.py`: creates the missing-panel analysis object.
 - `src/train_paper_benchmark.py`: trains one model for one seed.
-- `src/fusionvi.py`: totalVI-compatible dual-branch gated encoder.
+- `src/fusionvi.py`: totalVI-compatible, missingness-aware dual-branch encoder.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
 - `TECHNICAL_REPORT.md`: concise GitHub-readable report.
 - `deliverables/`: final PowerPoint and Word report.

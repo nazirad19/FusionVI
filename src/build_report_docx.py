@@ -195,6 +195,7 @@ def main() -> None:
         "but entire protein panels may be unavailable in a new batch. We reproduced the totalVI paper's Figure 3 "
         "missing-protein design on the official SLN111 CITE-seq object and compared the published totalVI architecture "
         "with FusionVI, which replaces the joint encoder with separate RNA and protein branches and a learned cell-level gate. "
+        "When the panel is absent, an availability rule routes the cell through the RNA branch. "
         f"Across {headline['completed_totalvi_initializations']} paired random initializations and 110 proteins, "
         + metric_sentence(delta, total, fusion, parameter_reduction)
         + " This course-scale benchmark estimates algorithmic performance; it does not establish population-level biological generalization."
@@ -254,13 +255,14 @@ def main() -> None:
     )
 
     doc.add_heading("4. Training and evaluation", level=1)
-    add_bullet(doc, "Five paired seeds: 2026 to 2030. Each seed initializes both models independently.")
+    n_seeds = headline["completed_fusionvi_initializations"]
+    add_bullet(doc, f"{n_seeds} paired seeds. Each seed initializes both models independently.")
     add_bullet(doc, "Maximum 500 epochs, Adam learning rate 0.004, batch size 256, 90/10 train-validation split.")
     add_bullet(doc, "Early stopping patience 45 with learning-rate reduction on validation plateau.")
     add_bullet(doc, "Predictions average 25 posterior samples and decode D2 cells through the D1 batch.")
     add_bullet(doc, "Primary metric: mean per-protein RMSLE across 7,564 D2 cells. Lower values indicate better reconstruction.")
     doc.add_paragraph(
-        "The paper used 30 initializations. We used five paired initializations to fit the course compute budget, so this is a "
+        f"The paper used 30 initializations. We used {n_seeds} paired initializations to fit the course compute budget, so this is a "
         "protocol-aligned reproduction rather than an exact reproduction of the paper's uncertainty analysis."
     )
 

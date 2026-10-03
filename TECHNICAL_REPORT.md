@@ -19,9 +19,9 @@ We used the processed SLN111 spleen and lymph-node CITE-seq object released with
 
 **totalVI baseline.** The current scvi-tools implementation uses the paper's joint RNA-protein encoder, 20-dimensional latent state, negative-binomial gene likelihood and background-aware protein likelihood.
 
-**FusionVI.** FusionVI changes only the encoder. Separate RNA and protein branches feed a learned cell-specific gate before the same latent state and native totalVI decoder. The benchmark version has 2.97 million trainable parameters, compared with 4.57 million for totalVI.
+**FusionVI.** FusionVI changes only the encoder. Separate RNA and protein branches feed a learned cell-specific gate; when the protein panel is absent, an explicit availability rule routes the cell through the RNA branch. The same latent state and native totalVI decoder are retained. The benchmark version has 2.97 million trainable parameters, compared with 4.57 million for totalVI.
 
-Both models use learning rate 0.004, batch size 256, a maximum of 500 epochs, validation-based early stopping with patience 45 and 25 posterior samples for prediction. We executed five paired random initializations. The paper used 30 initializations, so this is a course-scale paper-aligned reproduction rather than an exact replication of its uncertainty analysis.
+Both models use learning rate 0.004, batch size 256, a maximum of 500 epochs, validation-based early stopping with patience 45 and 25 posterior samples for prediction. We executed 4 paired random initializations. The paper used 30 initializations, so this is a course-scale paper-aligned reproduction rather than an exact replication of its uncertainty analysis.
 
 ## Evaluation
 
@@ -31,25 +31,24 @@ Proteins and random seeds are algorithmic benchmark units. They are not independ
 
 ## Results
 
-The models differed by only 0.0008 mean RMSLE (FusionVI minus totalVI -0.0008), while FusionVI used 35% fewer trainable parameters.
+FusionVI reduced mean RMSLE by 0.0060 (0.57%).
 
 | Metric | totalVI | FusionVI | FusionVI minus totalVI |
 |---|---:|---:|---:|
-| RMSLE, primary | 1.0602 | 1.0594 | -0.0008 |
-| MAE, log1p | 0.9304 | 0.9290 | -0.0014 |
-| MAE, raw abundance | 34.6997 | 34.0295 | -0.6702 |
-| Spearman correlation | 0.3256 | 0.3265 | +0.0009 |
-| Pearson correlation, log1p | 0.4553 | 0.4536 | -0.0017 |
+| RMSLE, primary | 1.0605 | 1.0544 | -0.0060 |
+| MAE, log1p | 0.9307 | 0.9242 | -0.0065 |
+| MAE, raw abundance | 34.7149 | 34.1587 | -0.5562 |
+| Spearman correlation | 0.3257 | 0.3248 | -0.0008 |
+| Pearson correlation, log1p | 0.4553 | 0.4530 | -0.0024 |
 
-FusionVI had lower RMSLE for 55 of 110 proteins. The paired two-sided Wilcoxon p-value across the 110 per-protein mean errors was 0.3028.
+FusionVI had lower RMSLE for 74 of 110 proteins. The paired two-sided Wilcoxon p-value across the 110 per-protein mean errors was 1.037e-05.
 
 | Seed | totalVI RMSLE | FusionVI RMSLE | Difference |
 |---:|---:|---:|---:|
-| 2026 | 1.0639 | 1.0645 | +0.0005 |
-| 2027 | 1.0602 | 1.0560 | -0.0041 |
-| 2028 | 1.0587 | 1.0560 | -0.0027 |
-| 2029 | 1.0590 | 1.0628 | +0.0038 |
-| 2030 | 1.0590 | 1.0577 | -0.0013 |
+| 2026 | 1.0639 | 1.0482 | -0.0157 |
+| 2027 | 1.0602 | 1.0619 | +0.0018 |
+| 2028 | 1.0587 | 1.0522 | -0.0065 |
+| 2029 | 1.0590 | 1.0554 | -0.0037 |
 
 ![Paper-aligned benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
 
