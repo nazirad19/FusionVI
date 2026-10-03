@@ -1,0 +1,31 @@
+{
+  "model": "RNA-only 128-component SVD plus multi-output ridge",
+  "input": "source-fitted SVD of log1p library-size-normalized RNA",
+  "best_alpha_selected_on_source_only": 100.0,
+  "alpha_tuning": [
+    {
+      "alpha": 0.1,
+      "validation_rmsle": 0.5418426990509033
+    },
+    {
+      "alpha": 1.0,
+      "validation_rmsle": 0.5418420433998108
+    },
+    {
+      "alpha": 10.0,
+      "validation_rmsle": 0.5418353080749512
+    },
+    {
+      "alpha": 100.0,
+      "validation_rmsle": 0.541769802570343
+    }
+  ],
+  "mean_protein_rmsle": 0.6378556858409535,
+  "median_protein_rmsle": 0.5710247755050659,
+  "mean_within_celltype_spearman": 0.16895627525439713,
+  "marker_auroc": {
+    "CD4": 0.9759535996274891,
+    "CD8": 0.9904852236421724,
+    "CD19": 0.9946676465900942
+  }
+}

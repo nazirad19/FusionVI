@@ -15,7 +15,7 @@ from __future__ import annotations
 from scvi.model import TOTALVI
 from scvi.nn import EncoderTOTALVI
 
-from fusionvi import AvailabilityAwareJointEncoderTOTALVI, FusionVIEncoder
+from fusionvi import AvailabilityAwareJointEncoderTOTALVI, FusionVIEncoder, ModalityDropoutJointEncoderTOTALVI
 
 
 def build_model(adata, cfg: dict, arm: dict) -> TOTALVI:
@@ -31,6 +31,8 @@ def build_model(adata, cfg: dict, arm: dict) -> TOTALVI:
     )
     n_genes = adata.n_vars
     n_proteins = adata.obsm["protein_counts"].shape[1]
+    batch_categories = list(adata.obs["batch"].cat.categories)
+    available_batch_indices = [batch_categories.index(cfg["source_batch"])]
     common = dict(
         n_latent=int(cfg["n_latent"]),
         n_cat_list=[model.module.n_batch],
@@ -47,13 +49,28 @@ def build_model(adata, cfg: dict, arm: dict) -> TOTALVI:
                 n_genes + n_proteins, int(cfg["n_latent"]), use_batch_norm=True, **enc
             )
     elif kind == "joint_available":
-        model.module.encoder = AvailabilityAwareJointEncoderTOTALVI(n_genes=n_genes, n_proteins=n_proteins, **common)
+        model.module.encoder = AvailabilityAwareJointEncoderTOTALVI(
+            n_genes=n_genes,
+            n_proteins=n_proteins,
+            available_batch_indices=available_batch_indices,
+            **common,
+        )
+    elif kind == "joint_moddrop":
+        model.module.encoder = ModalityDropoutJointEncoderTOTALVI(
+            n_genes=n_genes,
+            n_proteins=n_proteins,
+            modality_dropout=float(arm.get("modality_dropout", 0.3)),
+            available_batch_indices=available_batch_indices,
+            **common,
+        )
     elif kind == "fusion":
         model.module.encoder = FusionVIEncoder(
             n_genes=n_genes,
             n_proteins=n_proteins,
             masked_protein_indices=[],
             gate_mode=arm.get("gate", "learned"),
+            modality_dropout=float(arm.get("modality_dropout", 0.0)),
+            available_batch_indices=available_batch_indices,
             **common,
         )
     else:

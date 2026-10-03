@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -70,6 +72,7 @@ def main() -> None:
 
     scvi.settings.seed = args.seed
     torch.set_float32_matmul_precision("high")
+    torch.use_deterministic_algorithms(True, warn_only=True)
     adata = sc.read_h5ad(DATA)
     if args.smoke_cells:
         adata = sc.pp.subsample(adata, n_obs=args.smoke_cells, random_state=args.seed, copy=True)
@@ -116,6 +119,24 @@ def main() -> None:
     )
     truth = target.obsm["protein_truth"].astype(float)
     predicted = predicted.loc[truth.index, truth.columns].clip(lower=0.0)
+    _, predicted_foreground = model.get_normalized_expression(
+        target,
+        transform_batch=cfg["source_batch"],
+        n_samples=int(cfg["posterior_samples"]),
+        return_mean=True,
+        include_protein_background=False,
+        scale_protein=False,
+        return_numpy=False,
+    )
+    predicted_foreground = predicted_foreground.loc[truth.index, truth.columns].clip(lower=0.0)
+    np.savez_compressed(
+        run_dir / "target_predictions.npz",
+        truth=truth.to_numpy(dtype=np.float32),
+        prediction=predicted.to_numpy(dtype=np.float32),
+        foreground_prediction=predicted_foreground.to_numpy(dtype=np.float32),
+        protein_names=np.asarray(truth.columns, dtype=str),
+        cell_type=np.asarray(target.obs["cell_type"].astype(str), dtype=str),
+    )
     rows = []
     for protein in truth.columns:
         observed = truth[protein].to_numpy()
@@ -143,18 +164,34 @@ def main() -> None:
     pd.DataFrame(history).to_csv(run_dir / "training_history.csv", index=False)
     MODELS.mkdir(parents=True, exist_ok=True)
     torch.save(model.module.state_dict(), MODELS / f"{run_name}.pt")
+    config_bytes = (ROOT / "config" / "paper_benchmark.yaml").read_bytes()
+    try:
+        git_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except Exception:
+        git_commit = None
     result = {
         "model": label,
         "arm": args.model,
         "encoder_variant": arm["encoder"],
         "encoder_hidden": int(arm["hidden"]),
         "gate_mode": arm.get("gate"),
+        "modality_dropout": float(arm.get("modality_dropout", 0.0)),
         "seed": args.seed,
         "configured_max_epochs": effective_max_epochs,
         "epochs_completed": int(model.history["elbo_train"].shape[0]),
         "trainable_parameters": n_trainable(model),
         "mean_protein_rmsle": float(pd.DataFrame(rows)["rmsle"].mean()),
         "median_protein_rmsle": float(pd.DataFrame(rows)["rmsle"].median()),
+        "environment": {
+            "scvi_tools": scvi.__version__,
+            "torch": torch.__version__,
+            "cuda_runtime": torch.version.cuda,
+            "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        },
+        "config_sha256": hashlib.sha256(config_bytes).hexdigest(),
+        "git_commit": git_commit,
     }
     complete.write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2), flush=True)

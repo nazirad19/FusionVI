@@ -1,9 +1,11 @@
 """Leakage-safe statistics for Experiments 1 (Lawlor) and 2 (Papalexi), plus Holm.
 
-The Lawlor and Papalexi pipelines are not in this repository. Export their
-held-out predictions to the CSV layouts below and run:
+The original Lawlor and Papalexi training pipelines are not in this repository.
+The saved Papalexi held-out effects are versioned at
+``results/papalexi_effects.csv``; a Lawlor cell table must be supplied in the
+layout below. Run:
 
-  python src/stats_heldout_experiments.py exp2 --csv papalexi_effects.csv \
+  python src/stats_heldout_experiments.py exp2 --csv results/papalexi_effects.csv \
       --candidate fusionvi_xmodal --reference totalvi_xmodal
   python src/stats_heldout_experiments.py exp1 --csv lawlor_cells.csv
   python src/stats_heldout_experiments.py holm --p exp1=0.31 exp2=0.04 exp3=0.50 exp4=0.20

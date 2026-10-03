@@ -1,6 +1,7 @@
 # Control arms for the missing-protein benchmark (Experiment 4).
 # Usage:  .\run_controls.ps1            # tier 1 arms + baselines, all control_seeds
 #         .\run_controls.ps1 -Tier 2    # also tier 2 arms
+#         .\run_controls.ps1 -Tier 3    # also paired 30% modality-dropout arms
 # Completed runs are skipped, so the existing totalvi/fusionvi seeds 2026-2029 are reused.
 param(
     [int]$Tier = 1,
