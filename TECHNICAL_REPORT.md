@@ -1,77 +1,107 @@
 # FusionVI technical report
 
-## Question
+## Project question
 
-When an entire antibody panel is unavailable in a new CITE-seq batch, can a modality-specific fusion encoder recover immune surface-protein abundance more accurately than the published totalVI architecture?
+Can modality-specific fusion improve recovery of therapeutic surface biomarkers when protein measurements are missing, discordant with RNA, or observed under an unseen perturbation?
 
-This matters for therapeutic discovery because immune target and pharmacodynamic-marker panels are often incomplete across studies. Recovering an unmeasured surface panel can support dataset harmonization and hypothesis generation, although it does not replace experimental validation.
+FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. Together, they show that FusionVI is most useful when the task exposes a real cross-modal or missingness challenge; improvements are small when a standard readout already captures the available structure.
 
-## Dataset and paper experiment
+## Experiment overview
 
-We used the processed SLN111 spleen and lymph-node CITE-seq object released with the totalVI paper (Gayoso et al., 2021; GSE150599). The benchmark follows the paper's Figure 3 missing-protein design:
+| Experiment | Dataset and held-out unit | Biological question | Main result |
+|---|---|---|---|
+| 1. Donor-held-out activation | Lawlor PBMC CITE-seq; 10 donors | Can hidden CD25, CD69 and HLA-DR be recovered in an unseen donor, including RNA-protein-discordant cells? | Native encoders were close; a donor-safe cross-modal readout provided most of the gain. |
+| 2. Unseen perturbations | Papalexi ECCITE-seq; 25 CRISPR targets | Can PD-L1 protein effects be predicted for a perturbation absent from training? | FusionVI-X achieved effect Spearman 0.879 and 84.0% direction accuracy. |
+| 3. Targeted cross-mouse transfer | Original totalVI SLN111; 2 mice | Can four hidden immune markers be transferred to an unseen mouse? | Native FusionVI improved mean Spearman from 0.578 to 0.589; fixed cross-modal readouts were nearly tied. |
+| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 4 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI reduced RMSLE from 1.0605 to 1.0544. |
 
-- 16,828 cells, 4,005 selected genes and 110 non-hashtag proteins.
-- SLN111-D1 contains RNA and proteins for 9,264 cells.
-- SLN111-D2 contains RNA for 7,564 cells; all 110 proteins are hidden during training and retained only as evaluation truth.
-- Predictions for D2 are decoded in the D1 batch to harmonize the batches.
+## Method
 
-## Models
+**Published baseline.** totalVI models RNA with a negative-binomial likelihood and proteins with a background-foreground mixture. Its standard encoder jointly processes both modalities.
 
-**totalVI baseline.** The current scvi-tools implementation uses the paper's joint RNA-protein encoder, 20-dimensional latent state, negative-binomial gene likelihood and background-aware protein likelihood.
+**FusionVI encoder.** Separate RNA and protein branches produce modality-specific hidden representations. A learned gate combines them before estimating the same latent distribution used by the native totalVI decoder. For the complete missing-panel benchmark, an availability rule forces an RNA-only route when all protein inputs are absent, preventing an all-zero placeholder panel and encoder biases from creating a spurious protein representation.
 
-**FusionVI.** FusionVI changes only the encoder. Separate RNA and protein branches feed a learned cell-specific gate; when the protein panel is absent, an explicit availability rule routes the cell through the RNA branch. The same latent state and native totalVI decoder are retained. The benchmark version has 2.97 million trainable parameters, compared with 4.57 million for totalVI.
+**FusionVI-X readout.** Experiments 1 to 3 also evaluated a nested, leakage-safe cross-modal readout. It predicts a hidden protein from the learned latent state, the remaining proteins and a prespecified matching transcript. The same readout applied to totalVI is called totalVI-X. Native-decoder and X-readout results are reported separately because they answer different questions.
 
-Both models use learning rate 0.004, batch size 256, a maximum of 500 epochs, validation-based early stopping with patience 45 and 25 posterior samples for prediction. We executed 4 paired random initializations. The paper used 30 initializations, so this is a course-scale paper-aligned reproduction rather than an exact replication of its uncertainty analysis.
+## Experiment 1 Lawlor donor-held-out activation
 
-## Evaluation
+The Lawlor PBMC CITE-seq dataset contains 16,382 cells from 10 paired donors under baseline, LPS or anti-CD3/CD28 stimulation, with 4,000 genes and 39 antibody-derived tags. CD25 and CD69 were hidden in T cells and HLA-DR in monocytes. Every donor served once as the untouched outer test fold. Readout selection used only the other nine donors.
 
-The primary metric is per-protein root mean squared log error (RMSLE), matching the metric described for the paper experiment. Lower values are better. Secondary metrics are mean absolute error on log1p abundance, raw-count MAE, Spearman correlation and Pearson correlation on log1p abundance.
+| Target | totalVI native | FusionVI native | totalVI-X | FusionVI-X |
+|---|---:|---:|---:|---:|
+| CD25 in T cells | 0.779 | 0.779 | 0.828 | 0.825 |
+| CD69 in T cells | 0.822 | 0.826 | 0.874 | 0.873 |
+| HLA-DR in monocytes | 0.404 | 0.421 | 0.743 | 0.756 |
 
-Proteins and random seeds are algorithmic benchmark units. They are not independent biological replicates, so the paired protein test is descriptive evidence about this dataset rather than population-level inference.
+The encoder change alone was a negative or near-null result. The cross-modal readout substantially improved hidden-marker recovery, but totalVI-X and FusionVI-X remained close. The ablation showed why multimodality matters: marker-matched RNA alone became misleading in discordant cells, whereas the remaining surface-protein panel restored useful signal.
 
-## Results
+![Lawlor hidden-marker recovery](results/figures/lawlor_marker_recovery.png)
 
-FusionVI reduced mean RMSLE by 0.0060 (0.57%).
+## Experiment 2 Papalexi unseen CRISPR targets
 
-| Metric | totalVI | FusionVI | FusionVI minus totalVI |
+The Papalexi ECCITE-seq screen contains 20,729 IFN-gamma-treated THP-1 cells, 25 perturbed genes, three biological replicates and four surface proteins. PD-L1 was hidden. Five outer folds kept every cell from a CRISPR target together, so each target was evaluated only after being excluded from training. Outcomes were calculated from 75 target-by-replicate effects.
+
+| Model | Effect Spearman | Direction accuracy | Effect MAE |
 |---|---:|---:|---:|
-| RMSLE, primary | 1.0605 | 1.0544 | -0.0060 |
-| MAE, log1p | 0.9307 | 0.9242 | -0.0065 |
-| MAE, raw abundance | 34.7149 | 34.1587 | -0.5562 |
-| Spearman correlation | 0.3257 | 0.3248 | -0.0008 |
-| Pearson correlation, log1p | 0.4553 | 0.4530 | -0.0024 |
+| CD274 RNA only | 0.587 | 64.0% | — |
+| totalVI decoder | 0.767 | 76.0% | — |
+| FusionVI decoder | 0.820 | 77.3% | — |
+| totalVI-X | 0.841 | 82.7% | 0.085 |
+| FusionVI-X | **0.879** | **84.0%** | **0.081** |
 
-FusionVI had lower RMSLE for 74 of 110 proteins. The paired two-sided Wilcoxon p-value across the 110 per-protein mean errors was 1.037e-05.
+FusionVI-X reduced median gene-level absolute error by 0.0042 relative to totalVI-X (paired Wilcoxon p=0.042, 25 targets). It recovered the expected loss of PD-L1 after IFNGR1, IFNGR2, JAK2 and STAT1 perturbation and increased PD-L1 after CUL3 or BRD4 perturbation. It failed on CMTM6, where PD-L1 protein decreases despite slightly increased CD274 RNA. That failure is biologically informative because CMTM6 regulates PD-L1 stability after translation.
 
-| Seed | totalVI RMSLE | FusionVI RMSLE | Difference |
-|---:|---:|---:|---:|
-| 2026 | 1.0639 | 1.0482 | -0.0157 |
-| 2027 | 1.0602 | 1.0619 | +0.0018 |
-| 2028 | 1.0587 | 1.0522 | -0.0065 |
-| 2029 | 1.0590 | 1.0554 | -0.0037 |
+![Papalexi PD-L1 perturbation validation](results/figures/papalexi_pdl1_validation.png)
 
-![Paper-aligned benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
+## Experiment 3 original totalVI targeted marker transfer
 
-### Secondary marker-recovery extension
+The official SLN111 object contains 16,813 mouse spleen and lymph-node cells, 4,000 genes and 110 proteins. CD20, CD28, CD4 and CD8a were masked together. Each model trained on one mouse and was evaluated on the other, then the direction was reversed.
 
-In a separate two-fold leave-one-mouse-out experiment, four markers were hidden together while the other 106 proteins remained visible. A targeted FusionVI readout increased mean Spearman correlation from 0.578 to 0.673 across CD20, CD28, CD4 and CD8a. This secondary task evaluates a complete supervised prediction pipeline and does not isolate the encoder effect.
+| Readout | totalVI | FusionVI | Difference |
+|---|---:|---:|---:|
+| Native decoder mean Spearman | 0.578 | 0.589 | +0.012 |
+| Fixed cross-modal readout mean Spearman | 0.671 | 0.673 | +0.001 |
 
-## Interpretation
+The native FusionVI decoder improved modestly. FusionVI-X and totalVI-X were effectively tied, confirming that the fixed readout contributed most of the targeted-marker performance. Two mice support only a technical transfer conclusion.
 
-The paper-aligned benchmark directly tests missing-modality integration on the original totalVI dataset. Its primary result should determine any claim of superiority. The secondary four-marker experiment asks a narrower biological question and shows that multimodal context can preserve drug-relevant immune-cell identity when selected antibody measurements are missing.
+![Original totalVI targeted marker recovery](results/figures/totalvi_original_marker_recovery.png)
 
-## Limitations
+## Experiment 4 paper-aligned complete missing panel
 
-- The paper-aligned benchmark uses one source batch and one target batch.
-- Five initializations give a useful robustness check but do not reproduce the paper's 30-run uncertainty analysis.
-- The current software stack reimplements the protocol with scvi-tools 1.4.2; it does not execute the paper's historical code unchanged.
-- Protein imputation supports exploratory biomarker work. It cannot substitute for prospective antibody measurements or clinical validation.
+This experiment follows the totalVI paper's Figure 3 missing-protein test. SLN111-D1 retained RNA and all 110 proteins, while every D2 protein was hidden during training and preserved only for scoring. Both models used the same 20-dimensional latent space, native decoder and likelihoods, optimizer, split, 500-epoch budget and 25 posterior samples. Four paired seeds were run; the paper used 30.
 
-## Reproducibility
+| Metric | totalVI | FusionVI | Difference |
+|---|---:|---:|---:|
+| RMSLE primary | 1.0605 | **1.0544** | -0.0060 |
+| Proteins with lower RMSLE | — | 74/110 | — |
+| Trainable parameters | 4,574,975 | 2,971,904 | 35.0% fewer |
 
-Run `run_paper_benchmark.ps1` for the paper-aligned benchmark and `run_all.ps1` for the four-marker extension. The repository records the dataset checksum, environment versions, preprocessing rules, paired seeds and all compact result tables. Raw data, weights and regenerated intermediate arrays stay outside Git.
+FusionVI reduced RMSLE by 0.57%. The paired protein-level Wilcoxon p-value was 1.04e-05; it is descriptive because proteins and random seeds are algorithmic benchmark units rather than independent biological cohorts. MAE also improved, while Spearman and Pearson correlations were slightly lower. The supported claim is therefore lower reconstruction error with fewer parameters.
+
+![Paper-aligned complete-panel benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
+
+## Combined interpretation
+
+The four experiments do not support a blanket claim that FusionVI is always superior. They support three narrower conclusions:
+
+1. Separating modality encoders can help when the test condition contains a real modality-availability shift, as in the complete missing-panel benchmark.
+2. A leakage-safe cross-modal readout is more important than the encoder choice for targeted marker recovery when other proteins remain measured.
+3. Multimodal context improves prediction of unseen PD-L1 perturbation effects, but post-transcriptional mechanisms such as CMTM6 remain difficult when RNA and surface protein move in opposite directions.
+
+These results are relevant to therapeutic discovery as a biomarker-completion and perturbation-ranking study. They do not establish clinical utility, patient-level generalization or replacement of prospective protein measurements.
+
+## Reproducibility and limitations
+
+- Experiment 1 uses 10 independent donors but one dose and one 24-hour timepoint.
+- Experiment 2 uses one IFN-gamma-treated cell line; it tests mechanism-level transfer rather than patient response.
+- Experiment 3 has only two mice and should be treated as a technical replication.
+- Experiment 4 covers one source-target batch pair and four seeds rather than the paper's 30 initializations.
+- Native-decoder and cross-modal-readout results are never pooled because they measure different contributions.
+- `results/fusionvi_experiments_summary.json` records the consolidated metrics used in this report.
+- `run_paper_benchmark.ps1` reproduces the current full-panel benchmark. Historical experiment outputs remain traceable in the repository history.
 
 ## References
 
-1. Gayoso A, Steier Z, Lopez R, et al. Joint probabilistic modeling of single-cell multi-omic data with totalVI. *Nature Methods*. 2021;18:272-282. https://doi.org/10.1038/s41592-020-01050-x
-2. totalVI reproducibility repository: https://github.com/YosefLab/totalVI_reproducibility
+1. Gayoso A, Steier Z, Lopez R, et al. Joint probabilistic modeling of single-cell multi-omic data with totalVI. *Nature Methods*. 2021;18:272–282. https://doi.org/10.1038/s41592-020-01050-x
+2. Lawlor N, et al. Multiomic profiling identifies transcriptional and protein-level immune responses to stimulation. *Frontiers in Immunology*. 2021.
+3. Papalexi E, et al. Mapping and analysis of perturbation responses in single cells by pooled CRISPR screening. *Nature Genetics*. 2021.
