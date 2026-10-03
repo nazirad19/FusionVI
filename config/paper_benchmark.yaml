@@ -19,6 +19,10 @@ executed_seeds:
   - 2028
   - 2029
 primary_metric: RMSLE on log1p protein abundance
+secondary_biological_metrics:
+  - foreground RMSLE
+  - within-cell-type Spearman
+  - AUROC for source-defined positive calls on CD4, CD8 and CD19
 
 # Encoder controls. The decoder, likelihoods, latent size, optimizer and data
 # split stay fixed. Tier 1 addresses width, parameter count and missing-panel
@@ -32,6 +36,9 @@ arms:
   fusionvi_pmatch:    {encoder: fusion,          hidden: 406, gate: learned, tier: 2}
   fusionvi_fixedgate: {encoder: fusion,          hidden: 128, gate: fixed,   tier: 2}
   fusionvi_rnaonly:   {encoder: fusion,          hidden: 128, gate: rna_only, tier: 2}
+  totalvi_moddrop:    {encoder: joint_moddrop,   hidden: 256, modality_dropout: 0.30, tier: 3}
+  totalvi_w128_moddrop: {encoder: joint_moddrop, hidden: 128, modality_dropout: 0.30, tier: 3}
+  fusionvi_moddrop:   {encoder: fusion,          hidden: 128, gate: learned, modality_dropout: 0.30, tier: 3}
 
 control_seeds:
   - 2026
