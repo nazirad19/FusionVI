@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     h = json.loads((ROOT / "results" / "paper_benchmark_headline.json").read_text())
+    inference = json.loads((ROOT / "results" / "paper_benchmark_seed_inference.json").read_text())["metrics"]["rmsle"]
     total = h["totalvi_mean_rmsle"]
     fusion = h["fusionvi_mean_rmsle"]
     delta = h["fusionvi_minus_totalvi_rmsle"]
@@ -20,8 +21,9 @@ def main() -> None:
     n_seeds = h["completed_fusionvi_initializations"]
     readme = f"""# FusionVI
 
-FusionVI is a controlled comparison with the published totalVI architecture on
-the paper's own missing-protein experiment.
+FusionVI is an experimental encoder variant evaluated on the published
+totalVI missing-protein benchmark, with explicit capacity and missingness
+controls added after reanalysis.
 
 ## Question
 
@@ -44,7 +46,8 @@ The repository uses the official SLN111 object released with the totalVI paper:
 
 The comparison fixes the data, 20-dimensional latent space, native totalVI
 decoder and likelihoods, optimizer, validation split, training budget and
-posterior prediction procedure. The encoder is the only model change.
+posterior prediction procedure. The original encoder variants differ in width
+and library-size estimation; the new control arms isolate those differences.
 
 ### Models
 
@@ -59,6 +62,18 @@ Across {n_seeds} paired random initializations, mean per-protein RMSLE was
 **{abs(delta):.4f} {relation}** on the primary metric and used
 **{reduction:.1f}% fewer trainable parameters**. FusionVI had lower mean RMSLE
 for **{h['proteins_fusionvi_better']} of {h['proteins_compared']} proteins**.
+
+The seed-paired RMSLE difference was {inference['mean_difference']:+.4f}
+(95% t interval {inference['t_ci95'][0]:+.4f} to {inference['t_ci95'][1]:+.4f};
+p={inference['paired_t_p']:.2f}). The interval includes zero. The earlier
+protein-level p-value is descriptive because proteins are repeated outcomes
+within each initialization.
+
+The original comparison is also capacity-confounded: totalVI uses a 256-unit
+joint encoder and a separate library encoder, while FusionVI uses 128-unit
+branches and reuses the RNA branch for library size. The parameter reduction
+therefore cannot be attributed to modality fusion. `run_controls.ps1` adds
+same-width, parameter-matched and missing-panel-aware joint controls.
 
 The paper used 30 initializations. This repository records that protocol but
 runs {n_seeds} paired seeds for the course benchmark. The result supports a bounded
@@ -76,6 +91,7 @@ with one CUDA GPU.
 python -m venv .venv
 .\\.venv\\Scripts\\python -m pip install -r requirements.txt
 .\\run_paper_benchmark.ps1
+.\\run_controls.ps1 -Tier 1
 ```
 
 Completed runs are detected and skipped. The pipeline downloads and verifies
@@ -90,6 +106,10 @@ results, figures and reports.
 - `src/train_paper_benchmark.py`: trains one model for one seed.
 - `src/fusionvi.py`: totalVI-compatible, missingness-aware dual-branch encoder.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
+- `src/stats_paper_benchmark.py`: seed-level confidence intervals and exact tests.
+- `src/benchmark_arms.py`: capacity, missingness and gate control encoders.
+- `run_controls.ps1`: resumable seed-major control benchmark.
+- `CONTROLS.md`: control rationale and interpretation limits.
 - `TECHNICAL_REPORT.md`: concise GitHub-readable report.
 - `deliverables/`: final PowerPoint and Word report.
 - `results/`: compact per-seed and per-protein results.

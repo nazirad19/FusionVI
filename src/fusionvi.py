@@ -58,6 +58,54 @@ class MaskedJointEncoderTOTALVI(nn.Module):
         return self.base(masked, *cat_list)
 
 
+class AvailabilityAwareJointEncoderTOTALVI(nn.Module):
+    """Joint-encoder control that is explicitly told when proteins are absent.
+
+    Cells without a measured protein panel receive a learned placeholder and
+    a binary availability indicator. This separates missing-input handling
+    from the effect of FusionVI's two branches and gate.
+    """
+
+    def __init__(
+        self,
+        n_genes: int,
+        n_proteins: int,
+        n_latent: int,
+        n_cat_list: Iterable[int] | None,
+        n_layers: int,
+        n_hidden: int,
+        dropout_rate: float,
+        distribution: str = "normal",
+    ) -> None:
+        super().__init__()
+        self.n_genes = int(n_genes)
+        self.n_proteins = int(n_proteins)
+        self.missing_protein_embedding = nn.Parameter(torch.zeros(self.n_proteins))
+        self.base = EncoderTOTALVI(
+            self.n_genes + self.n_proteins + 1,
+            n_latent,
+            n_cat_list=n_cat_list,
+            n_layers=n_layers,
+            n_hidden=n_hidden,
+            dropout_rate=dropout_rate,
+            distribution=distribution,
+            use_batch_norm=True,
+        )
+        self.z_transformation = self.base.z_transformation
+        self.l_transformation = self.base.l_transformation
+
+    def forward(self, data: torch.Tensor, *cat_list: int):
+        rna = data[:, : self.n_genes]
+        protein = data[:, self.n_genes : self.n_genes + self.n_proteins]
+        remainder = data[:, self.n_genes + self.n_proteins :]
+        available = (protein.sum(dim=-1, keepdim=True) > 0).to(data.dtype)
+        protein = available * protein + (1.0 - available) * self.missing_protein_embedding
+        return self.base(torch.cat((rna, protein, available, remainder), dim=-1), *cat_list)
+
+
+GATE_MODES = ("learned", "fixed", "rna_only")
+
+
 class FusionVIEncoder(nn.Module):
     """Separate branches with a gate that respects protein-panel availability.
 
@@ -78,8 +126,14 @@ class FusionVIEncoder(nn.Module):
         n_hidden: int,
         dropout_rate: float,
         distribution: str = "normal",
+        gate_mode: str = "learned",
+        fixed_gate: float = 0.5,
     ) -> None:
         super().__init__()
+        if gate_mode not in GATE_MODES:
+            raise ValueError(f"gate_mode must be one of {GATE_MODES}")
+        self.gate_mode = gate_mode
+        self.fixed_gate = float(fixed_gate)
         self.n_genes = int(n_genes)
         self.n_proteins = int(n_proteins)
         mask = torch.ones(self.n_proteins)
@@ -120,6 +174,10 @@ class FusionVIEncoder(nn.Module):
         h_rna = self.rna_encoder(rna, *cat_list)
         h_protein = self.protein_encoder(protein, *cat_list)
         learned_gate = self.gate(torch.cat((h_rna, h_protein), dim=-1))
+        if self.gate_mode == "fixed":
+            learned_gate = torch.full_like(learned_gate, self.fixed_gate)
+        elif self.gate_mode == "rna_only":
+            learned_gate = torch.ones_like(learned_gate)
         protein_available = (protein.sum(dim=-1, keepdim=True) > 0).to(h_rna.dtype)
         gate = 1.0 - protein_available * (1.0 - learned_gate)
         return h_rna, h_protein, gate

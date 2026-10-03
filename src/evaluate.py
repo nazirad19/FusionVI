@@ -1,4 +1,9 @@
-"""Compare paper totalVI with the final FusionVI pipeline across mice."""
+"""Legacy native-decoder vs FusionVI-X cross-mouse comparison.
+
+This output is retained for reproducibility, but it is not a like-for-like
+model contrast. Use ``baselines_cross_mouse.py`` for native, X-readout and
+latent-free comparisons.
+"""
 
 from __future__ import annotations
 
@@ -94,14 +99,14 @@ def main() -> None:
             rows.append({
                 "heldout_mouse": fold,
                 "target": target,
-                "model": "FusionVI",
+                "model": "FusionVI-X",
                 "spearman": rho(y_test, fusion_prediction),
                 "n_cells": len(y_test),
             })
             pooled_predictions.append(pd.DataFrame({
                 "heldout_mouse": fold,
                 "target": target,
-                "model": "FusionVI",
+                "model": "FusionVI-X",
                 "true": y_test,
                 "prediction": fusion_prediction,
             }))
@@ -133,11 +138,13 @@ def main() -> None:
         "independent_biological_replicates": 2,
         "total_cells": int(adata.n_obs),
         "totalVI_mean_fold_spearman": float(mean_by_model["totalVI"]),
-        "FusionVI_mean_fold_spearman": float(mean_by_model["FusionVI"]),
-        "absolute_difference": float(mean_by_model["FusionVI"] - mean_by_model["totalVI"]),
+        "FusionVI_X_mean_fold_spearman": float(mean_by_model["FusionVI-X"]),
+        "absolute_difference_not_like_for_like": float(mean_by_model["FusionVI-X"] - mean_by_model["totalVI"]),
         "interpretation": (
-            "FusionVI recovered hidden surface-marker rankings more accurately in both mouse-held-out directions. "
-            "Two mice support a technical transfer result, not population-level inference."
+            "This is not a like-for-like comparison: it contrasts the native totalVI decoder with the "
+            "FusionVI-X ridge readout (latent + remaining proteins + matching transcript). Use "
+            "baselines_cross_mouse.py for fair readout controls. Two mice support a technical transfer "
+            "result, not population-level inference."
         ),
     }
     RESULTS.mkdir(parents=True, exist_ok=True)
@@ -145,6 +152,7 @@ def main() -> None:
     fold_summary.to_csv(RESULTS / "marker_summary.csv", index=False)
     pooled.to_csv(RESULTS / "pooled_metrics.csv", index=False)
     (RESULTS / "headline_results.json").write_text(json.dumps(headline, indent=2))
+    fold_summary["model"] = fold_summary["model"].astype(str)
     print(fold_summary.pivot(index="target", columns="model", values="mean_fold_spearman").round(3))
     print(json.dumps(headline, indent=2), flush=True)
 
