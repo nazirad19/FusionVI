@@ -1,0 +1,23 @@
+{
+  "mean_fold_spearman": {
+    "fusionvi_xmodal": 0.6728,
+    "protein_context": 0.6686,
+    "protein_context_plus_rna": 0.6698,
+    "rna_proxy": 0.4971,
+    "totalvi_xmodal": 0.6713
+  },
+  "totalvi_latent_increment": {
+    "ADT_CD20_A0192": 0.0034,
+    "ADT_CD28_A0204": -0.0008,
+    "ADT_CD4_A0001": 0.0047,
+    "ADT_CD8a_A0002": -0.0011,
+    "MEAN": 0.0015
+  },
+  "fusionvi_latent_increment": {
+    "ADT_CD20_A0192": 0.0029,
+    "ADT_CD28_A0204": 0.0003,
+    "ADT_CD4_A0001": 0.0095,
+    "ADT_CD8a_A0002": -0.0009,
+    "MEAN": 0.003
+  }
+}
