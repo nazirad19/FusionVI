@@ -7,6 +7,8 @@ data/processed/
 models/
 results/folds/
 results/final_folds/
+results/paper_benchmark_runs/
+results/paper_benchmark_runs_archive/
 results/experiment2_papalexi/
 results/experiment3_totalvi_original/
 results/cross_modal_head_predictions.csv
@@ -14,5 +16,6 @@ results/fusion_gates_all_cells.csv
 results/figures/*.svg
 lightning_logs/
 build/
+.build/
 .codex-finalizer/
 LibreOffice_*/
