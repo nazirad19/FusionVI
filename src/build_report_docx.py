@@ -187,9 +187,10 @@ def main() -> None:
         "FusionVI tests whether modality-specific encoding improves recovery of therapeutic surface biomarkers when protein "
         "measurements are hidden, discordant with RNA or observed under an unseen perturbation. Four completed experiments "
         "cover held-out human donors, held-out CRISPR targets, cross-mouse transfer and the full missing-protein-panel benchmark "
-        "from the totalVI paper. The evidence is deliberately mixed: FusionVI is useful under a true missing-modality shift and "
-        "in the PD-L1 perturbation task, while targeted marker studies show that a leakage-safe cross-modal readout often matters "
-        "more than the encoder. These results support a bounded biomarker-completion and perturbation-ranking contribution."
+        "from the totalVI paper. The evidence is deliberately mixed: multimodal context is useful in the PD-L1 perturbation task, "
+        "while targeted marker studies show that measured protein context often matters more than the learned latent. The apparent "
+        "missing-panel benefit is small and still requires capacity controls. These results support a bounded biomarker-completion "
+        "and perturbation-ranking contribution."
     )
 
     doc.add_heading("Project question", level=1)

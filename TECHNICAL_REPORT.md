@@ -4,7 +4,7 @@
 
 Can modality-specific fusion improve recovery of therapeutic surface biomarkers when protein measurements are missing, discordant with RNA, or observed under an unseen perturbation?
 
-FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. Together, they show that FusionVI is most useful when the task exposes a real cross-modal or missingness challenge; improvements are small when a standard readout already captures the available structure.
+FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. Together, they show useful multimodal signal in therapeutic biomarker tasks, while the specific advantage of the FusionVI encoder remains uncertain after accounting for seed variation, measured protein context and model capacity.
 
 ## Experiment overview
 
