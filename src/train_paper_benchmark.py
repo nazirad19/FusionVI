@@ -87,6 +87,7 @@ def main() -> None:
         check_val_every_n_epoch=1,
         reduce_lr_on_plateau=True,
         adversarial_classifier=True,
+        datasplitter_kwargs={"num_workers": 4, "persistent_workers": True, "pin_memory": True},
         enable_progress_bar=True,
     )
 

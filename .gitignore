@@ -15,5 +15,6 @@ results/fusion_gates_all_cells.csv
 results/figures/*.svg
 lightning_logs/
 build/
+.build/
 .codex-finalizer/
 LibreOffice_*/

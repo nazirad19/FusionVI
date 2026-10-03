@@ -1,4 +1,23 @@
-# FusionVI
+"""Write the public project README from final benchmark outputs."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main() -> None:
+    h = json.loads((ROOT / "results" / "paper_benchmark_headline.json").read_text())
+    total = h["totalvi_mean_rmsle"]
+    fusion = h["fusionvi_mean_rmsle"]
+    delta = h["fusionvi_minus_totalvi_rmsle"]
+    relation = "lower" if delta < 0 else "higher"
+    params = {r["model"]: r["trainable_parameters"] for r in h["completed_runs"]}
+    reduction = 100 * (params["totalVI"] - params["FusionVI"]) / params["totalVI"]
+    readme = f"""# FusionVI
 
 FusionVI is a controlled comparison with the published totalVI architecture on
 the paper's own missing-protein experiment.
@@ -35,10 +54,10 @@ posterior prediction procedure. The encoder is the only model change.
 ## Main result
 
 Across five paired random initializations, mean per-protein RMSLE was
-**1.0602 for totalVI** and **1.0594 for FusionVI**. FusionVI was
-**0.0008 lower** on the primary metric and used
-**35.0% fewer trainable parameters**. FusionVI had lower mean RMSLE
-for **55 of 110 proteins**.
+**{total:.4f} for totalVI** and **{fusion:.4f} for FusionVI**. FusionVI was
+**{abs(delta):.4f} {relation}** on the primary metric and used
+**{reduction:.1f}% fewer trainable parameters**. FusionVI had lower mean RMSLE
+for **{h['proteins_fusionvi_better']} of {h['proteins_compared']} proteins**.
 
 The paper used 30 initializations. This repository records that protocol but
 runs five paired seeds for the course benchmark. The result supports a bounded
@@ -54,8 +73,8 @@ with one CUDA GPU.
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python -m pip install -r requirements.txt
-.\run_paper_benchmark.ps1
+.\\.venv\\Scripts\\python -m pip install -r requirements.txt
+.\\run_paper_benchmark.ps1
 ```
 
 Completed runs are detected and skipped. The pipeline downloads and verifies
@@ -82,3 +101,9 @@ Git.
 Gayoso A, Steier Z, Lopez R, et al. Joint probabilistic modeling of single-cell
 multi-omic data with totalVI. *Nature Methods*. 2021;18:272-282.
 https://doi.org/10.1038/s41592-020-01050-x
+"""
+    (ROOT / "README.md").write_text(readme, encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

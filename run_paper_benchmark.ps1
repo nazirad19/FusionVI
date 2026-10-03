@@ -15,3 +15,10 @@ foreach ($seed in $seeds) {
     }
 }
 & $python (Join-Path $PSScriptRoot 'src\evaluate_paper_benchmark.py')
+if ($LASTEXITCODE -ne 0) { throw 'Paper benchmark evaluation failed' }
+& $python (Join-Path $PSScriptRoot 'src\write_technical_report.py')
+if ($LASTEXITCODE -ne 0) { throw 'Technical report generation failed' }
+& $python (Join-Path $PSScriptRoot 'src\write_readme.py')
+if ($LASTEXITCODE -ne 0) { throw 'README generation failed' }
+& $python (Join-Path $PSScriptRoot 'src\build_report_docx.py')
+if ($LASTEXITCODE -ne 0) { throw 'Word report generation failed' }
