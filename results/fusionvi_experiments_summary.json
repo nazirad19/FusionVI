@@ -9,11 +9,31 @@
       "proteins": 39,
       "biological_replicates": 10,
       "design": "Ten-fold leave-one-donor-out validation across baseline, LPS and anti-CD3/CD28 conditions",
-      "targets": ["CD25 in T cells", "CD69 in T cells", "HLA-DR in monocytes"],
-      "native_totalvi_spearman": [0.77880206598954, 0.8218055911586845, 0.40407196888638175],
-      "native_fusionvi_spearman": [0.7786645460664713, 0.8263259940265204, 0.42148885184106255],
-      "totalvi_xmodal_spearman": [0.8280477990039211, 0.8741479617214123, 0.7431395126812365],
-      "fusionvi_xmodal_spearman": [0.8249359220981933, 0.8732223214003291, 0.7560572573132112],
+      "targets": [
+        "CD25 in T cells",
+        "CD69 in T cells",
+        "HLA-DR in monocytes"
+      ],
+      "native_totalvi_spearman": [
+        0.77880206598954,
+        0.8218055911586845,
+        0.40407196888638175
+      ],
+      "native_fusionvi_spearman": [
+        0.7786645460664713,
+        0.8263259940265204,
+        0.42148885184106255
+      ],
+      "totalvi_xmodal_spearman": [
+        0.8280477990039211,
+        0.8741479617214123,
+        0.7431395126812365
+      ],
+      "fusionvi_xmodal_spearman": [
+        0.8249359220981933,
+        0.8732223214003291,
+        0.7560572573132112
+      ],
       "conclusion": "The encoder change alone produced small, inconsistent differences. The donor-safe cross-modal readout recovered hidden markers substantially better than either native decoder, but totalVI-X and FusionVI-X were nearly tied. The useful signal came mainly from targeted cross-modal context."
     },
     {
@@ -27,14 +47,125 @@
       "biological_replicates": 3,
       "design": "Five-fold leave-CRISPR-targets-out validation with 75 target-by-replicate effects",
       "metrics": {
-        "cd274_rna_only": {"effect_spearman": 0.5871408250355619, "direction_accuracy": 0.64},
-        "totalvi_decoder": {"effect_spearman": 0.7668563300142247, "direction_accuracy": 0.76},
-        "fusionvi_decoder": {"effect_spearman": 0.8198577524893313, "direction_accuracy": 0.7733333333333333},
-        "totalvi_xmodal": {"effect_spearman": 0.8413940256045519, "direction_accuracy": 0.8266666666666667, "effect_mae": 0.08535554911827098},
-        "fusionvi_xmodal": {"effect_spearman": 0.8794025604551919, "direction_accuracy": 0.84, "effect_mae": 0.08107690782719398}
+        "cd274_rna_only": {
+          "effect_spearman": 0.5871408250355619,
+          "direction_accuracy": 0.64
+        },
+        "totalvi_decoder": {
+          "effect_spearman": 0.7668563300142247,
+          "direction_accuracy": 0.76
+        },
+        "fusionvi_decoder": {
+          "effect_spearman": 0.8198577524893313,
+          "direction_accuracy": 0.7733333333333333
+        },
+        "totalvi_xmodal": {
+          "effect_spearman": 0.8413940256045519,
+          "direction_accuracy": 0.8266666666666667,
+          "effect_mae": 0.08535554911827098
+        },
+        "fusionvi_xmodal": {
+          "effect_spearman": 0.8794025604551919,
+          "direction_accuracy": 0.84,
+          "effect_mae": 0.08107690782719398
+        }
       },
-      "paired_gene_test": {"median_absolute_error_reduction": 0.004198113550762274, "p_value": 0.04215019941329956, "n_targets": 25},
-      "conclusion": "FusionVI-X ranked unseen perturbation effects best and recovered expected IFNGR1, IFNGR2, JAK2 and STAT1 losses. It failed on CMTM6, a post-transcriptional PD-L1 stability mechanism, which defines a biologically meaningful limitation."
+      "conclusion": "Given each held-out perturbation cell\u2019s RNA and three other measured proteins, FusionVI-X ranked its PD-L1 effect slightly better than totalVI-X. This is cross-modal PD-L1 completion for unseen perturbation targets, not prediction from target identity alone. CMTM6 remained a biologically meaningful post-transcriptional failure.",
+      "test_time_inputs": "For every held-out perturbation cell, the model receives that cell\u2019s RNA profile and the other three measured surface proteins; only PD-L1 is hidden. The perturbation target label is not used as a predictor.",
+      "target_cluster_bootstrap": {
+        "unit": "CRISPR target (n=25)",
+        "models": {
+          "totalvi_xmodal": {
+            "effect_spearman": {
+              "estimate": 0.8414,
+              "ci95": [
+                0.6538,
+                0.9493
+              ]
+            },
+            "direction_accuracy": {
+              "estimate": 0.8267,
+              "ci95": [
+                0.72,
+                0.92
+              ]
+            },
+            "effect_mae": {
+              "estimate": 0.0854,
+              "ci95": [
+                0.0538,
+                0.1257
+              ]
+            }
+          },
+          "fusionvi_xmodal": {
+            "effect_spearman": {
+              "estimate": 0.8794,
+              "ci95": [
+                0.7284,
+                0.9673
+              ]
+            },
+            "direction_accuracy": {
+              "estimate": 0.84,
+              "ci95": [
+                0.7467,
+                0.9333
+              ]
+            },
+            "effect_mae": {
+              "estimate": 0.0811,
+              "ci95": [
+                0.0503,
+                0.1201
+              ]
+            }
+          }
+        },
+        "contrast": {
+          "effect_spearman": {
+            "difference": 0.038,
+            "ci95": [
+              0.0113,
+              0.0833
+            ],
+            "p_boot": 0.0008
+          },
+          "direction_accuracy": {
+            "difference": 0.0133,
+            "ci95": [
+              -0.0667,
+              0.0933
+            ],
+            "p_boot": 0.8432
+          },
+          "effect_mae": {
+            "difference": -0.0043,
+            "ci95": [
+              -0.0109,
+              0.003
+            ],
+            "p_boot": 0.2272
+          }
+        },
+        "replicate_averaged_spearman_n_targets": {
+          "totalvi_xmodal": 0.88,
+          "fusionvi_xmodal": 0.8985
+        },
+        "largest_candidate_errors": {
+          "CMTM6": 0.4142,
+          "IRF1": 0.2341,
+          "STAT1": 0.1587,
+          "PDCD1LG2": 0.1578,
+          "BRD4": 0.152
+        }
+      },
+      "paired_target_test": {
+        "median_absolute_error_reduction": 0.004198113550762274,
+        "p_value": 0.04215019941329956,
+        "n_targets": 25,
+        "metric": "per-target PD-L1 effect absolute error, after averaging the three replicate effects within each CRISPR target"
+      }
     },
     {
       "id": 3,
@@ -70,14 +201,48 @@
       "proteins_fusionvi_better": 74,
       "proteins_compared": 110,
       "protein_level_wilcoxon_p": 1.0368908206536914e-05,
-      "seed_level_rmsle_ci95": [-0.0176399066500363, 0.005600905150968409],
+      "seed_level_rmsle_ci95": [
+        -0.0176399066500363,
+        0.005600905150968409
+      ],
       "seed_level_paired_t_p": 0.19780100972610146,
       "seed_level_exact_p": 0.25,
       "seeds_favouring_fusionvi": 3,
       "seeds_for_80pct_power": 14,
       "totalvi_parameters": 4574975,
       "fusionvi_parameters": 2971904,
-      "conclusion": "FusionVI's mean RMSLE was 0.57% lower, but the seed-level 95% interval included zero (p=0.20). The 35% parameter difference is primarily explained by a narrower encoder and removal of totalVI's separate library encoder, so controlled width, parameter-count and missingness-aware baselines are required before attributing the difference to fusion."
+      "conclusion": "FusionVI's mean RMSLE was 0.57% lower than totalVI, but the seed-level interval included zero and the original architecture comparison is confounded. A source-only RNA SVD-ridge baseline reached RMSLE 0.638, substantially below both neural models (~1.06), showing that the reported neural-model gap is not a useful performance claim under this endpoint.",
+      "rna_ridge_baseline": {
+        "model": "RNA-only 128-component SVD plus multi-output ridge",
+        "input": "source-fitted SVD of log1p library-size-normalized RNA",
+        "best_alpha_selected_on_source_only": 100.0,
+        "alpha_tuning": [
+          {
+            "alpha": 0.1,
+            "validation_rmsle": 0.5418426990509033
+          },
+          {
+            "alpha": 1.0,
+            "validation_rmsle": 0.5418420433998108
+          },
+          {
+            "alpha": 10.0,
+            "validation_rmsle": 0.5418353080749512
+          },
+          {
+            "alpha": 100.0,
+            "validation_rmsle": 0.541769802570343
+          }
+        ],
+        "mean_protein_rmsle": 0.6378556858409535,
+        "median_protein_rmsle": 0.5710247755050659,
+        "mean_within_celltype_spearman": 0.16895627525439713,
+        "marker_auroc": {
+          "CD4": 0.9759535996274891,
+          "CD8": 0.9904852236421724,
+          "CD19": 0.9946676465900942
+        }
+      }
     }
   ]
 }
