@@ -48,11 +48,21 @@ p=0.20). The interval includes zero. The earlier
 protein-level p-value is descriptive because proteins are repeated outcomes
 within each initialization.
 
+A source-only RNA baseline using a 128-component SVD and multi-output ridge
+reached mean protein RMSLE **0.6379**, substantially
+below both neural models. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
+within-cell-type Spearman was only 0.169.
+Aggregate error and marker separation can therefore look strong without
+recovering subtle within-cell-state variation.
+
 The original comparison is also capacity-confounded: totalVI uses a 256-unit
 joint encoder and a separate library encoder, while FusionVI uses 128-unit
 branches and reuses the RNA branch for library size. The parameter reduction
 therefore cannot be attributed to modality fusion. `run_controls.ps1` adds
 same-width, parameter-matched and missing-panel-aware joint controls.
+Tier 3 adds paired totalVI and FusionVI arms with 30% supervised whole-panel
+dropout, so the protein decoder learns from RNA-only latents under a fair
+comparison.
 
 The paper used 30 initializations. This repository records that protocol but
 runs 4 paired seeds for the course benchmark. The result supports a bounded
@@ -71,6 +81,8 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
 .\run_paper_benchmark.ps1
 .\run_controls.ps1 -Tier 1
+python src\rna_baseline_paper_benchmark.py
+python -m unittest discover -s tests -v
 ```
 
 Completed runs are detected and skipped. The pipeline downloads and verifies
@@ -85,6 +97,8 @@ results, figures and reports.
 - `src/train_paper_benchmark.py`: trains one model for one seed.
 - `src/fusionvi.py`: totalVI-compatible, missingness-aware dual-branch encoder.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
+- `src/rna_baseline_paper_benchmark.py`: source-only tuned RNA ridge baseline.
+- `src/evaluate_biological_metrics.py`: foreground, within-cell-type and marker-AUROC metrics.
 - `src/stats_paper_benchmark.py`: seed-level confidence intervals and exact tests.
 - `src/benchmark_arms.py`: capacity, missingness and gate control encoders.
 - `run_controls.ps1`: resumable seed-major control benchmark.

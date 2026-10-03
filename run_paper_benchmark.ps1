@@ -16,6 +16,12 @@ foreach ($seed in $seeds) {
 }
 & $python (Join-Path $PSScriptRoot 'src\evaluate_paper_benchmark.py')
 if ($LASTEXITCODE -ne 0) { throw 'Paper benchmark evaluation failed' }
+& $python (Join-Path $PSScriptRoot 'src\rna_baseline_paper_benchmark.py')
+if ($LASTEXITCODE -ne 0) { throw 'RNA ridge baseline failed' }
+& $python (Join-Path $PSScriptRoot 'src\evaluate_biological_metrics.py') --generate-missing
+if ($LASTEXITCODE -ne 0) { throw 'Biological metric evaluation failed' }
+& $python -m unittest discover -s (Join-Path $PSScriptRoot 'tests') -v
+if ($LASTEXITCODE -ne 0) { throw 'Benchmark integrity tests failed' }
 & $python (Join-Path $PSScriptRoot 'src\write_technical_report.py')
 if ($LASTEXITCODE -ne 0) { throw 'Technical report generation failed' }
 & $python (Join-Path $PSScriptRoot 'src\write_readme.py')

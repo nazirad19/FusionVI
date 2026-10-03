@@ -35,6 +35,9 @@ the rest from halving the width. The modality split itself saves little.
 | `fusionvi_pmatch` | fusion, width 406 | 4.58M | fusion at totalVI's capacity |
 | `fusionvi_fixedgate` | gate fixed at 0.5 | 2.97M | does **learning** the gate matter? |
 | `fusionvi_rnaonly` | gate fixed at 1 | 2.97M | does the protein branch matter at all? |
+| `totalvi_moddrop` | joint, width 256, 30% panel dropout | pending | modality dropout applied to the published totalVI configuration |
+| `totalvi_w128_moddrop` | joint, width 128, 30% panel dropout | pending | same-width joint control trained to decode proteins from RNA-only latents |
+| `fusionvi_moddrop` | gated fusion, width 128, 30% panel dropout | pending | does supervised RNA-only training improve the missing-panel task? |
 
 Tier 1 holds the first three arms and is the minimum. Each FusionVI arm also writes
 `gates.csv`, the per-cell RNA weight (1 = RNA only). Target-batch cells are 1 by construction.
@@ -42,7 +45,17 @@ Tier 1 holds the first three arms and is the minimum. Each FusionVI arm also wri
 ```powershell
 .\run_controls.ps1          # tier 1, 16 seeds, seed-major order
 .\run_controls.ps1 -Tier 2  # plus the tier 2 arms
+.\run_controls.ps1 -Tier 3  # plus paired modality-dropout arms
 ```
+
+The modality-dropout arms hide the entire encoder-side protein panel for 30%
+of measured D1 cells during training while leaving those cells' protein
+likelihood active. Panel availability is taken from batch metadata rather than
+inferred from a zero count sum.
+
+`src/rna_baseline_paper_benchmark.py` fits a source-only tuned RNA ridge
+baseline. `src/evaluate_biological_metrics.py` adds foreground RMSLE,
+within-cell-type Spearman and source-thresholded CD4/CD8/CD19 AUROC.
 
 `src/evaluate_controls.py` writes `control_contrasts.csv` (seed-paired RMSLE
 differences, t CI, exact p, Holm across contrasts) and
@@ -53,20 +66,20 @@ still require full-data paired runs.
 
 ## Experiments 1 and 2
 
-The clean repository does not expose cell-level held-out prediction tables for
-Lawlor and Papalexi. Export those predictions in the layouts documented at the top of
-`src/stats_heldout_experiments.py`, then:
+The original Lawlor and Papalexi training source was not retained. The branch
+does include the 75 saved Papalexi target-by-replicate effects needed to rerun
+the target-cluster bootstrap. Lawlor cell-level predictions are unavailable.
 
 ```bash
-python src/stats_heldout_experiments.py exp2 --csv papalexi_effects.csv   # target-cluster bootstrap CIs
+python src/stats_heldout_experiments.py exp2 --csv results/papalexi_effects.csv   # target-cluster bootstrap CIs
 python src/stats_heldout_experiments.py exp1 --csv lawlor_cells.csv       # RNA strata + leakage-safe discordance
 python src/stats_heldout_experiments.py holm --p exp1=... exp2=... exp3=... exp4=...
 ```
 
 ## Other fixes
 
-- The repository already contains its original `src/prepare_paper_benchmark.py`
-  and `src/evaluate_paper_benchmark.py`; the versions supplied in the review
-  archive were therefore not used.
+- The original `src/prepare_paper_benchmark.py` and
+  `src/evaluate_paper_benchmark.py` are now included on the branch so both
+  PowerShell runners work from a fresh clone.
 - `src/evaluate.py` now labels its readout `FusionVI-X`. Regenerate the legacy
   output files before citing them.
