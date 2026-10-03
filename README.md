@@ -56,6 +56,8 @@ from the same mouse appearing in both training and test data.
 
 ## Results
 
+### Preliminary four-marker extension
+
 | Hidden protein | totalVI | FusionVI | Difference |
 |---|---:|---:|---:|
 | CD20 | 0.624 | 0.738 | +0.115 |
@@ -70,6 +72,22 @@ showed the largest gains, consistent with the remaining protein panel carrying
 strong lineage information that complements sparse marker-matched RNA.
 
 ![totalVI versus FusionVI](results/figures/totalvi_vs_fusionvi.png)
+
+### Paper-aligned benchmark
+
+The direct benchmark reproduces the missing-protein design used for totalVI
+Figure 3f-h. SLN111-D1 retains all 110 protein measurements, whereas every
+protein measurement in SLN111-D2 is zeroed and excluded from the training
+likelihood. Both models receive the same 4,005 genes, batches, decoder,
+likelihood, optimizer and validation split. Predictions are decoded in the
+SLN111-D1 batch and evaluated against the untouched SLN111-D2 proteins using
+root mean squared log error (RMSLE), the primary metric described in the paper.
+
+The course benchmark uses five paired initializations. The paper used 30 model
+initializations, so the configuration records both numbers and does not present
+the smaller run as an exact replication of the paper's uncertainty analysis.
+FusionVI uses 2.97 million trainable parameters versus 4.57 million for totalVI
+in this benchmark.
 
 ## Interpretation
 
@@ -93,6 +111,7 @@ one CUDA GPU.
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
 .\run_all.ps1
+.\run_paper_benchmark.ps1
 ```
 
 The script downloads and verifies the source object, prepares the analysis
@@ -100,10 +119,15 @@ matrix, trains totalVI and FusionVI in both mouse-held-out directions, evaluates
 the hidden markers and regenerates the final figure. Completed folds are
 detected and skipped.
 
+`run_paper_benchmark.ps1` prepares the exact all-proteins-missing split, trains
+both models under paired seeds, and writes per-protein RMSLE, correlation and
+paired model summaries.
+
 ## Repository layout
 
 - `config/experiment.yaml` sets the seed, model size, training schedule and
   hidden markers.
+- `config/paper_benchmark.yaml` fixes the Figure 3-style benchmark protocol.
 - `src/download_data.py` downloads the official dataset and verifies SHA-256.
 - `src/prepare_data.py` filters cells, selects genes and removes hashtag
   controls.
@@ -113,6 +137,9 @@ detected and skipped.
 - `src/evaluate.py` fits the fixed FusionVI readout and computes both models'
   held-out correlations.
 - `src/make_figure.py` regenerates the final comparison figure.
+- `src/prepare_paper_benchmark.py`, `src/train_paper_benchmark.py` and
+  `src/evaluate_paper_benchmark.py` reproduce and evaluate the paper-aligned
+  missing-protein benchmark.
 - `results/` contains compact metrics and figures.
 - `deliverables/` contains the presentation and technical report.
 

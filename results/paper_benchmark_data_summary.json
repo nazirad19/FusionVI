@@ -1,0 +1,8 @@
+{
+  "cells": 16828,
+  "genes": 4005,
+  "proteins": 110,
+  "source_cells": 9264,
+  "target_cells": 7564,
+  "target_observed_protein_entries_used_for_training": 0
+}
