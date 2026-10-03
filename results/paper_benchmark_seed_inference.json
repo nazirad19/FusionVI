@@ -1,0 +1,157 @@
+{
+  "reference": "totalVI",
+  "candidate": "FusionVI",
+  "unit": "random initialization (seed)",
+  "metrics": {
+    "rmsle": {
+      "lower_is_better": true,
+      "reference_mean": 1.060451102230467,
+      "candidate_mean": 1.054431601480933,
+      "per_seed_difference": {
+        "2026": -0.01568290436678743,
+        "2027": 0.0017828628182738893,
+        "2028": -0.006503772714151035,
+        "2029": -0.0036741887354712066
+      },
+      "mean_difference": -0.006019500749533946,
+      "relative_difference_pct": -0.5676358614624489,
+      "seed_sd_of_difference": 0.007302813487353668,
+      "t_ci95": [
+        -0.0176399066500363,
+        0.005600905150968409
+      ],
+      "bootstrap_ci95": [
+        -0.012680725458958375,
+        -0.00028879606483234177
+      ],
+      "paired_t_p": 0.19780100972610146,
+      "sign_flip_exact_p": 0.25,
+      "min_attainable_sign_flip_p": 0.125,
+      "seeds_favouring_candidate": 3,
+      "n_seeds": 4,
+      "seeds_for_80pct_power_at_observed_effect": 14,
+      "descriptive_proteins_favouring_candidate": 74,
+      "descriptive_n_proteins": 110
+    },
+    "mae_log1p": {
+      "lower_is_better": true,
+      "reference_mean": 0.9307298836741968,
+      "candidate_mean": 0.9242437846546917,
+      "per_seed_difference": {
+        "2026": -0.0161518401225772,
+        "2027": 0.0018429286362645625,
+        "2028": -0.007233453573979309,
+        "2029": -0.004402031017728625
+      },
+      "mean_difference": -0.006486099019505143,
+      "relative_difference_pct": -0.6968830735186332,
+      "seed_sd_of_difference": 0.007476655469488909,
+      "t_ci95": [
+        -0.018383126306882245,
+        0.00541092826787196
+      ],
+      "bootstrap_ci95": [
+        -0.013214387846365055,
+        -0.00042616691629640546
+      ],
+      "paired_t_p": 0.18114412516170772,
+      "sign_flip_exact_p": 0.25,
+      "min_attainable_sign_flip_p": 0.125,
+      "seeds_favouring_candidate": 3,
+      "n_seeds": 4,
+      "seeds_for_80pct_power_at_observed_effect": 13,
+      "descriptive_proteins_favouring_candidate": 74,
+      "descriptive_n_proteins": 110
+    },
+    "mae_raw": {
+      "lower_is_better": true,
+      "reference_mean": 34.714908048765935,
+      "candidate_mean": 34.15867151352389,
+      "per_seed_difference": {
+        "2026": -1.3868542278758085,
+        "2027": 0.18706716349718988,
+        "2028": -1.0472681139516098,
+        "2029": 0.022109037362049833
+      },
+      "mean_difference": -0.5562365352420446,
+      "relative_difference_pct": -1.6022987428359847,
+      "seed_sd_of_difference": 0.7784646753956213,
+      "t_ci95": [
+        -1.7949475502453824,
+        0.6824744797612932
+      ],
+      "bootstrap_ci95": [
+        -1.2170611709137091,
+        0.10458810042961986
+      ],
+      "paired_t_p": 0.24831928785545077,
+      "sign_flip_exact_p": 0.5,
+      "min_attainable_sign_flip_p": 0.125,
+      "seeds_favouring_candidate": 2,
+      "n_seeds": 4,
+      "seeds_for_80pct_power_at_observed_effect": 18,
+      "descriptive_proteins_favouring_candidate": 84,
+      "descriptive_n_proteins": 110
+    },
+    "spearman": {
+      "lower_is_better": false,
+      "reference_mean": 0.325660028897698,
+      "candidate_mean": 0.3248415560701342,
+      "per_seed_difference": {
+        "2026": 4.437064346746178e-05,
+        "2027": -0.0009422458943905143,
+        "2028": -0.002146930460882601,
+        "2029": -0.00022908559844969645
+      },
+      "mean_difference": -0.0008184728275638375,
+      "relative_difference_pct": -0.25132738283363304,
+      "seed_sd_of_difference": 0.0009784333765325665,
+      "t_ci95": [
+        -0.002375378669620002,
+        0.000738433014492327
+      ],
+      "bootstrap_ci95": [
+        -0.001667469245274375,
+        -9.235747749111733e-05
+      ],
+      "paired_t_p": 0.1929153986535893,
+      "sign_flip_exact_p": 0.25,
+      "min_attainable_sign_flip_p": 0.125,
+      "seeds_favouring_candidate": 1,
+      "n_seeds": 4,
+      "seeds_for_80pct_power_at_observed_effect": 14,
+      "descriptive_proteins_favouring_candidate": 49,
+      "descriptive_n_proteins": 110
+    },
+    "pearson_log1p": {
+      "lower_is_better": false,
+      "reference_mean": 0.4553495935548555,
+      "candidate_mean": 0.45299181238111746,
+      "per_seed_difference": {
+        "2026": 0.0013948717401760513,
+        "2027": -0.002411392315280647,
+        "2028": -0.0057607893164834945,
+        "2029": -0.002653814803363741
+      },
+      "mean_difference": -0.002357781173737958,
+      "relative_difference_pct": -0.5177958226186312,
+      "seed_sd_of_difference": 0.002929924821348758,
+      "t_ci95": [
+        -0.007019945384968149,
+        0.0023043830374922334
+      ],
+      "bootstrap_ci95": [
+        -0.004923440066182783,
+        0.00038270010429110324
+      ],
+      "paired_t_p": 0.20589366419148414,
+      "sign_flip_exact_p": 0.25,
+      "min_attainable_sign_flip_p": 0.125,
+      "seeds_favouring_candidate": 1,
+      "n_seeds": 4,
+      "seeds_for_80pct_power_at_observed_effect": 15,
+      "descriptive_proteins_favouring_candidate": 23,
+      "descriptive_n_proteins": 110
+    }
+  }
+}

@@ -19,3 +19,34 @@ executed_seeds:
   - 2028
   - 2029
 primary_metric: RMSLE on log1p protein abundance
+
+# Encoder controls. The decoder, likelihoods, latent size, optimizer and data
+# split stay fixed. Tier 1 addresses width, parameter count and missing-panel
+# handling; Tier 2 tests capacity and gate ablations.
+arms:
+  totalvi:            {encoder: joint,           hidden: 256, tier: 0}
+  fusionvi:           {encoder: fusion,          hidden: 128, gate: learned, tier: 0}
+  totalvi_w128:       {encoder: joint,           hidden: 128, tier: 1}
+  totalvi_pmatch:     {encoder: joint,           hidden: 70,  tier: 1}
+  totalvi_avail_w128: {encoder: joint_available, hidden: 128, tier: 1}
+  fusionvi_pmatch:    {encoder: fusion,          hidden: 406, gate: learned, tier: 2}
+  fusionvi_fixedgate: {encoder: fusion,          hidden: 128, gate: fixed,   tier: 2}
+  fusionvi_rnaonly:   {encoder: fusion,          hidden: 128, gate: rna_only, tier: 2}
+
+control_seeds:
+  - 2026
+  - 2027
+  - 2028
+  - 2029
+  - 2030
+  - 2031
+  - 2032
+  - 2033
+  - 2034
+  - 2035
+  - 2036
+  - 2037
+  - 2038
+  - 2039
+  - 2040
+  - 2041
