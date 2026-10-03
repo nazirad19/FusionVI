@@ -1,0 +1,21 @@
+benchmark: totalVI Figure 3 missing-protein imputation
+paper_dataset: spleen_lymph_111.h5ad
+source_batch: SLN111-D1
+target_batch: SLN111-D2
+n_genes: 4005
+n_proteins: 110
+n_latent: 20
+totalvi_hidden: 256
+fusion_branch_hidden: 128
+max_epochs: 500
+early_stopping_patience: 45
+batch_size: 256
+learning_rate: 0.004
+posterior_samples: 25
+paper_initializations: 30
+executed_seeds:
+  - 2026
+  - 2027
+  - 2028
+  - 2029
+primary_metric: RMSLE on log1p protein abundance
