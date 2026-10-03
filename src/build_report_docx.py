@@ -164,6 +164,9 @@ def configure_document(doc: Document) -> None:
 def main() -> None:
     lawlor, papalexi, targeted, paper = json.loads(SUMMARY.read_text())["experiments"]
     pm = papalexi["metrics"]
+    pb = papalexi["target_cluster_bootstrap"]
+    pt = papalexi["paired_target_test"]
+    ridge = paper["rna_ridge_baseline"]
     relative = 100 * (paper["totalvi_mean_rmsle"] - paper["fusionvi_mean_rmsle"]) / paper["totalvi_mean_rmsle"]
     parameter_reduction = 100 * (paper["totalvi_parameters"] - paper["fusionvi_parameters"]) / paper["totalvi_parameters"]
 
@@ -189,7 +192,8 @@ def main() -> None:
         "cover held-out human donors, held-out CRISPR targets, cross-mouse transfer and the full missing-protein-panel benchmark "
         "from the totalVI paper. The evidence is deliberately mixed: multimodal context is useful in the PD-L1 perturbation task, "
         "while targeted marker studies show that measured protein context often matters more than the learned latent. The apparent "
-        "missing-panel benefit is small and still requires capacity controls. These results support a bounded biomarker-completion "
+        "missing-panel difference is small, and a source-only RNA ridge baseline outperforms both neural models on aggregate RMSLE. "
+        "These results support a bounded biomarker-completion "
         "and perturbation-ranking contribution."
     )
 
@@ -207,7 +211,7 @@ def main() -> None:
             ["Lawlor activation", "10 human donors", "Native encoders close; cross-modal context supplied most of the marker-recovery gain"],
             ["Papalexi PD-L1", "25 CRISPR targets", "FusionVI-X reached 0.879 effect Spearman and 84.0% direction accuracy"],
             ["SLN111 targeted markers", "2 mice", "Protein context + RNA reached 0.670; either latent added no more than 0.003"],
-            ["SLN111 complete panel", "4 paired seeds", "RMSLE difference -0.0060; seed-level 95% CI crossed zero"],
+            ["SLN111 complete panel", "4 paired seeds", f"RNA ridge RMSLE {ridge['mean_protein_rmsle']:.3f}; both neural models were about 1.06"],
         ],
         [1.55, 1.35, 3.85],
     )
@@ -254,9 +258,11 @@ def main() -> None:
     doc.add_heading("Experiment 2 Papalexi unseen CRISPR targets", level=1)
     doc.add_heading("Biological question and design", level=2)
     doc.add_paragraph(
-        f"Can PD-L1 protein effects be predicted for a perturbation absent from training? The ECCITE-seq screen contains "
+        f"Given a held-out perturbation cell's RNA and three measured proteins, can its hidden PD-L1 response be recovered? The ECCITE-seq screen contains "
         f"{papalexi['cells']:,} IFN-gamma-treated THP-1 cells, 25 perturbation targets, three biological replicates and four surface "
-        "proteins. Five outer folds held out complete CRISPR targets. Evaluation used 75 target-by-replicate effects."
+        "proteins. Five outer folds held out complete CRISPR targets. At test time, each cell's RNA and the other three measured "
+        "proteins remain inputs; only PD-L1 is hidden, and the perturbation-target label is not used. Evaluation used 75 "
+        "target-by-replicate effects."
     )
     add_table(
         doc,
@@ -272,8 +278,13 @@ def main() -> None:
     )
     add_result_lead(doc, "Result  FusionVI-X ranked unseen perturbation effects best.")
     doc.add_paragraph(
-        f"FusionVI-X reduced median gene-level absolute error by {papalexi['paired_gene_test']['median_absolute_error_reduction']:.4f} "
-        f"relative to totalVI-X (paired Wilcoxon p={papalexi['paired_gene_test']['p_value']:.3f}, 25 targets). It recovered expected "
+        f"FusionVI-X reduced median per-target PD-L1 effect absolute error by {pt['median_absolute_error_reduction']:.4f} "
+        f"relative to totalVI-X after replicate averaging (paired Wilcoxon p={pt['p_value']:.3f}, 25 targets). A 5,000-sample "
+        f"target-cluster bootstrap estimated FusionVI-X effect Spearman at {pb['models']['fusionvi_xmodal']['effect_spearman']['estimate']:.3f} "
+        f"(95% CI {pb['models']['fusionvi_xmodal']['effect_spearman']['ci95'][0]:.3f} to "
+        f"{pb['models']['fusionvi_xmodal']['effect_spearman']['ci95'][1]:.3f}) and its difference from totalVI-X at "
+        f"{pb['contrast']['effect_spearman']['difference']:+.3f} (95% CI {pb['contrast']['effect_spearman']['ci95'][0]:+.3f} to "
+        f"{pb['contrast']['effect_spearman']['ci95'][1]:+.3f}). The MAE-difference interval included zero. It recovered expected "
         "PD-L1 loss after IFNGR1, IFNGR2, JAK2 and STAT1 perturbation and gain after CUL3 or BRD4 perturbation."
     )
     doc.add_paragraph(
@@ -336,17 +347,27 @@ def main() -> None:
         f"The {parameter_reduction:.1f}% parameter difference mostly reflects width 128 versus 256 and removal of totalVI's "
         "separate library encoder. Same-width, parameter-matched and missingness-aware controls are required to isolate fusion."
     )
+    doc.add_paragraph(
+        f"A source-only RNA baseline fit a 128-component SVD and multi-output ridge on D1, selected its penalty on a D1 validation "
+        f"split, and reached mean D2 protein RMSLE {ridge['mean_protein_rmsle']:.4f}. This is substantially below totalVI "
+        f"({paper['totalvi_mean_rmsle']:.4f}) and FusionVI ({paper['fusionvi_mean_rmsle']:.4f}). Source-defined marker AUROC was "
+        f"{ridge['marker_auroc']['CD4']:.3f} for CD4, {ridge['marker_auroc']['CD8']:.3f} for CD8 and "
+        f"{ridge['marker_auroc']['CD19']:.3f} for CD19, but mean within-cell-type Spearman was only "
+        f"{ridge['mean_within_celltype_spearman']:.3f}. Aggregate marker separation therefore does not imply recovery of subtle "
+        "within-cell-state variation. Paired modality-dropout arms now test whether supervised RNA-only latents close this gap."
+    )
     add_figure(doc, ROOT / "results" / "figures" / "paper_benchmark_totalvi_vs_fusionvi.png", "Figure 4. Paired seeds, per-protein RMSLE and paired protein differences.", 6.70)
 
     doc.add_page_break()
     doc.add_heading("Combined interpretation", level=1)
     doc.add_paragraph(
-        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment suggests a small "
-        "candidate benefit, but four seeds and unequal capacity do not yet identify gated fusion as its cause. When other proteins remain "
+        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment shows a small "
+        "FusionVI-versus-totalVI difference, but four seeds and unequal capacity do not identify gated fusion as its cause, and an RNA ridge "
+        "baseline performs substantially better than both. When other proteins remain "
         "available, measured protein context often contributes more than the learned latent. The Papalexi result shows that multimodal context "
         "can rank unseen PD-L1 perturbation effects, while the CMTM6 failure exposes a post-transcriptional boundary."
     )
-    add_bullet(doc, "Candidate result: lower mean full-panel reconstruction error, with uncertainty spanning zero.")
+    add_bullet(doc, "Negative benchmark result: RNA SVD-ridge outperformed both neural models on full-panel RMSLE.")
     add_bullet(doc, "Positive result: improved ranking and direction of unseen PD-L1 perturbation effects.")
     add_bullet(doc, "Negative result: the encoder alone did not consistently improve donor-held-out marker recovery.")
     add_bullet(doc, "Boundary condition: RNA-centered evidence can fail for protein-stability mechanisms such as CMTM6.")
@@ -363,10 +384,12 @@ def main() -> None:
     add_bullet(doc, "The original complete-panel comparison differs in encoder width and library-network design; control arms are running.")
     add_bullet(doc, "Seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.")
     add_bullet(doc, "Native and X-readout results are separated throughout the report.")
+    add_bullet(doc, "Modality-dropout arms and neural-model foreground, cell-type and marker-AUROC analyses are implemented but full runs remain pending.")
     add_bullet(doc, "Consolidated metrics are stored in results/fusionvi_experiments_summary.json.")
     doc.add_paragraph(
-        "The current full-panel benchmark is reproduced with .\\run_paper_benchmark.ps1. Earlier executed experiment outputs remain "
-        "traceable in repository history; their consolidated metrics and figures are versioned with this report."
+        "The current full-panel benchmark is reproduced with .\\run_paper_benchmark.ps1. The original Lawlor and Papalexi training "
+        "pipelines were not retained, so Experiments 1 and 2 are documented from saved held-out predictions, metrics and figures and "
+        "are not reproducible from a fresh clone. The versioned Papalexi effect table reproduces the target-cluster bootstrap."
     )
 
     doc.add_heading("References", level=1)
