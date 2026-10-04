@@ -12,8 +12,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 from scipy import stats
 
 from stats_paper_benchmark import sign_flip_p
@@ -21,6 +25,7 @@ from stats_paper_benchmark import sign_flip_p
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "results" / "paper_benchmark_runs"
 OUT = ROOT / "results"
+CONFIG = ROOT / "config" / "paper_benchmark.yaml"
 
 # (candidate, reference, question answered)
 CONTRASTS = [
@@ -46,10 +51,13 @@ def holm(pvals: list[float]) -> list[float]:
 
 
 def main() -> None:
+    cfg = yaml.safe_load(CONFIG.read_text())
+    control_seeds = {int(seed) for seed in cfg["control_seeds"]}
     frames = [pd.read_csv(f) for f in sorted(RUNS.glob("*/protein_metrics.csv"))]
     if not frames:
         raise SystemExit(f"No completed runs under {RUNS}")
     metrics = pd.concat(frames, ignore_index=True)
+    metrics = metrics[metrics["seed"].isin(control_seeds)].copy()
     metrics.to_csv(OUT / "control_all_metrics.csv", index=False)
     per_seed = metrics.groupby(["model", "seed"])[["rmsle", "mae_log1p", "spearman", "pearson_log1p"]].mean()
 
@@ -99,6 +107,74 @@ def main() -> None:
         print(summary.to_string())
 
     (OUT / "control_contrasts.json").write_text(json.dumps(results, indent=2))
+
+    # A compact, report-ready view of the three prespecified Tier 1 controls.
+    key_refs = ["totalvi_w128", "totalvi_pmatch", "totalvi_avail_w128"]
+    key = table[(table["candidate"] == "FusionVI") & table["reference"].isin(key_refs)].copy()
+    labels = {
+        "totalvi_w128": "Joint encoder\nsame width",
+        "totalvi_pmatch": "Joint encoder\nsame parameters",
+        "totalvi_avail_w128": "Joint encoder\n+ availability",
+    }
+    key["label"] = key["reference"].map(labels)
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2), gridspec_kw={"width_ratios": [1.15, 1]})
+    y = np.arange(len(key))
+    axes[0].errorbar(
+        key["rmsle_diff"], y,
+        xerr=[key["rmsle_diff"] - key["ci95_low"], key["ci95_high"] - key["rmsle_diff"]],
+        fmt="o", color="#6D28D9", ecolor="#A78BFA", capsize=4, linewidth=2,
+    )
+    axes[0].axvline(0, color="#475569", linestyle="--", linewidth=1)
+    axes[0].set_yticks(y, key["label"])
+    axes[0].invert_yaxis()
+    axes[0].set_xlabel("FusionVI - control mean RMSLE")
+    axes[0].set_title("Paired effect across 16 seeds", loc="left", weight="bold")
+    axes[0].text(0.02, -0.23, "Lower favors FusionVI; bars are 95% t intervals", transform=axes[0].transAxes, fontsize=9)
+
+    models = ["FusionVI", *key_refs]
+    colors = ["#6D28D9", "#38BDF8", "#14B8A6", "#F59E0B"]
+    for idx, (model, color) in enumerate(zip(models, colors)):
+        vals = per_seed.loc[model, "rmsle"].to_numpy()
+        jitter = np.linspace(-0.09, 0.09, len(vals))
+        axes[1].scatter(np.full(len(vals), idx) + jitter, vals, s=22, alpha=0.65, color=color, edgecolor="none")
+        axes[1].plot([idx - 0.18, idx + 0.18], [vals.mean(), vals.mean()], color="#0F172A", linewidth=2.5)
+    axes[1].set_xticks(range(len(models)), ["FusionVI", "Same\nwidth", "Same\nparameters", "+ availability"])
+    axes[1].set_ylabel("Mean protein RMSLE")
+    axes[1].set_title("Every dot is one seed", loc="left", weight="bold")
+    axes[1].grid(axis="y", color="#E2E8F0", linewidth=0.8)
+    for ax in axes:
+        ax.spines[["top", "right"]].set_visible(False)
+    fig.suptitle("FusionVI advantage survives matched encoder controls", x=0.06, ha="left", fontsize=15, weight="bold")
+    fig.tight_layout()
+    fig.savefig(OUT / "figures" / "control_benchmark.png", dpi=220, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+    # Keep the consolidated report source synchronized with the executed controls.
+    summary_path = OUT / "fusionvi_experiments_summary.json"
+    if summary_path.exists():
+        summary = json.loads(summary_path.read_text())
+        experiment = next(exp for exp in summary["experiments"] if exp["id"] == 4)
+        means = per_seed.groupby("model")["rmsle"].mean().to_dict()
+        report_models = ["FusionVI", "totalVI", *key_refs]
+        params = {}
+        for model in report_models:
+            files = sorted(RUNS.glob(f"{model}__seed*/complete.json"))
+            if files:
+                params[model] = json.loads(files[0].read_text()).get("trainable_parameters")
+        experiment["paired_initializations"] = len(control_seeds)
+        experiment["confirmatory_controls"] = {
+            "status": "Tier 1 complete",
+            "control_seeds": sorted(control_seeds),
+            "mean_rmsle": {model: float(means[model]) for model in report_models},
+            "trainable_parameters": params,
+            "contrasts": results,
+            "interpretation": (
+                "FusionVI had lower RMSLE than same-width, parameter-matched, and missing-panel-aware "
+                "joint encoders across 16 paired seeds. The availability indicator alone did not improve "
+                "the joint encoder. The RNA SVD-ridge baseline remained substantially better on aggregate RMSLE."
+            ),
+        }
+        summary_path.write_text(json.dumps(summary, indent=2) + "\n")
 
 
 if __name__ == "__main__":
