@@ -93,3 +93,18 @@ python src\evaluate_calibration.py --benchmark dev_tissue --arms totalvi totalvi
 ```
 
 The tagged outputs are preserved alongside the untagged convenience outputs produced by `run_controls.ps1`.
+
+## Protocol amendment 1: exploratory distillation gate
+
+This amendment was written after the masking sweep selected `totalvi_moddrop_p50` and before any distillation code or run. It does not change the completed masking selection rule.
+
+Two exploratory distillation weights may be tried: `lambda = 0.1` and `lambda = 1.0`. Both use 50% whole-panel masking and development seeds `2026` through `2029`. Each is compared with `totalvi_moddrop_p50`, not with plain totalVI.
+
+A distillation weight advances only when both conditions hold on both `dev_random` and `dev_tissue`:
+
+1. mean paired `delta RMSLE = distillation - totalvi_moddrop_p50 <= -0.0010`;
+2. mean paired `delta within-CT Spearman >= -0.0020`.
+
+Development decisions again use direction and magnitude rather than p-values. If both weights pass, select the weight with the lowest average paired RMSLE difference across the two splits; if they are within `0.0005`, select `lambda = 0.1`. If neither passes, distillation is recorded as a negative exploratory result and `totalvi_moddrop_p50` remains the frozen candidate for the final `paper` benchmark.
+
+The teacher is a frozen, seed-matched totalVI checkpoint. On source cells, the teacher receives RNA plus the full protein panel. The student receives the 50%-masked route. The additional loss is `lambda * KL(q_student || stopgrad(q_teacher))`. The measured source proteins remain targets of the ordinary totalVI protein likelihood. No target protein truth enters training.

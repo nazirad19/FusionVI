@@ -1,0 +1,119 @@
+{
+  "protocol": "TOTALVI_MISSING_MODALITY_PROTOCOL.md",
+  "primary_readout": "likelihood_mean",
+  "gate": {
+    "max_rmsle_delta": -0.001,
+    "min_within_ct_spearman_delta": -0.002
+  },
+  "benchmarks": {
+    "dev_random": {
+      "totalvi": {
+        "rmsle": 0.5343,
+        "within_celltype_spearman": 0.163,
+        "n_seeds": 4,
+        "efficiency_median_range": [
+          0.3687820583581924,
+          0.3725762218236923
+        ]
+      },
+      "totalvi_moddrop_p25": {
+        "rmsle": 0.5339,
+        "within_celltype_spearman": 0.163,
+        "n_seeds": 4,
+        "delta_rmsle": -0.000473391379505,
+        "delta_within_celltype_spearman": 5.3900975352988434e-05,
+        "efficiency_median_range": [
+          0.3680565655231476,
+          0.3735135346651077
+        ],
+        "rmsle_wins_out_of_4": 2,
+        "within_celltype_spearman_wins_out_of_4": 2
+      },
+      "totalvi_moddrop_p50": {
+        "rmsle": 0.5331,
+        "within_celltype_spearman": 0.1659,
+        "n_seeds": 4,
+        "delta_rmsle": -0.0012070913560899,
+        "delta_within_celltype_spearman": 0.0029295652198977,
+        "efficiency_median_range": [
+          0.3696545660495758,
+          0.3728174716234207
+        ],
+        "rmsle_wins_out_of_4": 4,
+        "within_celltype_spearman_wins_out_of_4": 3
+      },
+      "totalvi_moddrop_p75": {
+        "rmsle": 0.5336,
+        "within_celltype_spearman": 0.1661,
+        "n_seeds": 4,
+        "delta_rmsle": -0.0007683537460348,
+        "delta_within_celltype_spearman": 0.0031513997031143,
+        "efficiency_median_range": [
+          0.3682621866464615,
+          0.3731186687946319
+        ],
+        "rmsle_wins_out_of_4": 2,
+        "within_celltype_spearman_wins_out_of_4": 3
+      }
+    },
+    "dev_tissue": {
+      "totalvi": {
+        "rmsle": 0.5539,
+        "within_celltype_spearman": 0.1359,
+        "n_seeds": 4,
+        "efficiency_median_range": [
+          0.367933377623558,
+          0.3727918416261673
+        ]
+      },
+      "totalvi_moddrop_p25": {
+        "rmsle": 0.5529,
+        "within_celltype_spearman": 0.1379,
+        "n_seeds": 4,
+        "delta_rmsle": -0.0009398446508359,
+        "delta_within_celltype_spearman": 0.002007497209544,
+        "efficiency_median_range": [
+          0.3695840537548065,
+          0.3724972456693649
+        ],
+        "rmsle_wins_out_of_4": 3,
+        "within_celltype_spearman_wins_out_of_4": 2
+      },
+      "totalvi_moddrop_p50": {
+        "rmsle": 0.5512,
+        "within_celltype_spearman": 0.1397,
+        "n_seeds": 4,
+        "delta_rmsle": -0.0026637858667444,
+        "delta_within_celltype_spearman": 0.0037669842570461,
+        "efficiency_median_range": [
+          0.3685099482536316,
+          0.3733514845371246
+        ],
+        "rmsle_wins_out_of_4": 4,
+        "within_celltype_spearman_wins_out_of_4": 3
+      },
+      "totalvi_moddrop_p75": {
+        "rmsle": 0.5512,
+        "within_celltype_spearman": 0.1388,
+        "n_seeds": 4,
+        "delta_rmsle": -0.0026477913020222,
+        "delta_within_celltype_spearman": 0.0028997682391997,
+        "efficiency_median_range": [
+          0.3692090064287185,
+          0.373949870467186
+        ],
+        "rmsle_wins_out_of_4": 3,
+        "within_celltype_spearman_wins_out_of_4": 2
+      }
+    }
+  },
+  "passes": {
+    "totalvi_moddrop_p25": false,
+    "totalvi_moddrop_p50": true,
+    "totalvi_moddrop_p75": false
+  },
+  "selected_arm": "totalvi_moddrop_p50",
+  "decision": "advance selected masking rate to one exploratory distillation arm",
+  "interpretation": "Moderate-to-strong masking produced a small development gain of roughly 0.001 to 0.003 RMSLE; 50% was selected by the frozen gate, not because it robustly outperformed 75%.",
+  "distillation_gate_amendment": "See TOTALVI_MISSING_MODALITY_PROTOCOL.md; compare each exploratory weight with totalvi_moddrop_p50 on both development splits."
+}
