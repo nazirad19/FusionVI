@@ -36,40 +36,47 @@ and library-size estimation; the new control arms isolate those differences.
 
 ## Main result
 
-Across 4 paired random initializations, mean per-protein RMSLE was
-**1.0605 for totalVI** and **1.0544 for FusionVI**. FusionVI was
-**0.0060 lower** on the primary metric and used
-**35.0% fewer trainable parameters**. FusionVI had lower mean RMSLE
-for **74 of 110 proteins**.
+Across 16 paired random initializations, FusionVI reached mean
+per-protein RMSLE **1.0539**. It was lower than:
 
-The seed-paired RMSLE difference was -0.0060
-(95% t interval -0.0176 to +0.0056;
-p=0.20). The interval includes zero. The earlier
-protein-level p-value is descriptive because proteins are repeated outcomes
-within each initialization.
+- the same-width joint encoder by **0.0106**
+  (95% CI -0.0135 to -0.0077;
+  15/16 seed wins);
+- the parameter-matched joint encoder by **0.0189**
+  (95% CI -0.0216 to -0.0162;
+  16/16 wins); and
+- the missingness-aware joint encoder by **0.0112**
+  (95% CI -0.0143 to -0.0081;
+  15/16 wins).
+
+Against the published totalVI configuration, the difference was
+-0.0062 (95% CI -0.0086 to
+-0.0038; 14/16 wins). Adding a missing-panel indicator to
+the same-width joint encoder did not improve RMSLE (+0.0006;
+p=0.51).
 
 A source-only RNA baseline using a 128-component SVD and multi-output ridge
 reached mean protein RMSLE **0.6379**, substantially
-below both neural models. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
+below every neural model. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
 within-cell-type Spearman was only 0.169.
 Aggregate error and marker separation can therefore look strong without
 recovering subtle within-cell-state variation.
 
-The original comparison is also capacity-confounded: totalVI uses a 256-unit
-joint encoder and a separate library encoder, while FusionVI uses 128-unit
-branches and reuses the RNA branch for library size. The parameter reduction
-therefore cannot be attributed to modality fusion. `run_controls.ps1` adds
-same-width, parameter-matched and missing-panel-aware joint controls.
+The original comparison was capacity-confounded: totalVI uses a 256-unit joint
+encoder and a separate library encoder, while FusionVI uses 128-unit branches
+and reuses the RNA branch for library size. The completed same-width,
+parameter-matched and missing-panel-aware controls show that the small FusionVI
+advantage is not explained by those differences alone.
 Tier 3 adds paired totalVI and FusionVI arms with 30% supervised whole-panel
 dropout, so the protein decoder learns from RNA-only latents under a fair
 comparison.
 
 The paper used 30 initializations. This repository records that protocol but
-runs 4 paired seeds for the course benchmark. The result supports a bounded
+runs 16 paired seeds for the course benchmark. The result supports a bounded
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
-![Paper-aligned totalVI versus FusionVI benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
+![FusionVI confirmatory encoder controls](results/figures/control_benchmark.png)
 
 ## Reproduce
 
