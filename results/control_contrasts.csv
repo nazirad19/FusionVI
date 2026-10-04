@@ -1,0 +1,6 @@
+candidate,reference,question,n_seeds,rmsle_diff,ci95_low,ci95_high,seeds_candidate_better,p_t,p_exact,p_holm
+FusionVI,totalvi_w128,Does branch fusion beat a joint encoder of the same width?,16,-0.010610446070729807,-0.013499942817181854,-0.007720949324277759,15,1.126251983126839e-06,6.103515625e-05,3.378755949380517e-06
+FusionVI,totalvi_pmatch,Does branch fusion beat a joint encoder with the same parameter count?,16,-0.0189151990359971,-0.021606526819886663,-0.01622387125210754,16,1.9776984072513676e-10,3.0517578125e-05,7.91079362900547e-10
+FusionVI,totalvi_avail_w128,Does fusion add anything beyond telling a joint encoder the panel is missing?,16,-0.01120199014928755,-0.014275648440956783,-0.008128331857618316,15,1.2346932987547708e-06,6.103515625e-05,3.378755949380517e-06
+totalvi_avail_w128,totalvi_w128,Does the missing-panel indicator alone help a joint encoder?,16,0.000591544078557743,-0.0012948752897845917,0.002477963446900078,7,0.5140451265138456,0.512542724609375,0.5140451265138456
+FusionVI,totalVI,Original comparison (confounded by width and the library network).,16,-0.006224527535597976,-0.008619685164763741,-0.003829369906432212,14,5.673480443832294e-05,0.00018310546875,
