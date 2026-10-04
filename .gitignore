@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 data/raw/
 data/processed/
+data/seurat/
 models/
 results/folds/
 results/final_folds/
@@ -11,6 +12,8 @@ results/paper_benchmark_runs/
 results/paper_benchmark_runs_archive/
 results/smoke_runs/
 results/control_logs/
+results/pilot_*/
+results/runs_*/
 results/experiment2_papalexi/
 results/experiment3_totalvi_original/
 results/cross_modal_head_predictions.csv

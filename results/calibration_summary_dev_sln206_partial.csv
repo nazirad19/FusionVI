@@ -1,0 +1,9 @@
+arm,readout,rmsle,abs_bias,residual_sd,spearman,pearson,within_celltype_spearman,marker_auroc,n_seeds
+fusionvi,calibrated,0.4984,0.0132,0.4981,0.2156,0.2873,0.1051,,4
+fusionvi,log_mean,1.0688,0.9409,0.5008,0.2159,0.2876,0.1058,,4
+fusionvi,pred_log,0.9635,0.812,0.5085,0.1961,0.2628,0.0864,,4
+rna_panel_ridge,ridge,0.488,0.0114,0.4878,0.3147,0.3831,0.1895,,1
+rna_ridge,ridge,0.5074,0.0118,0.5071,0.218,0.2742,0.0898,,1
+totalvi_w128,calibrated,0.4995,0.0125,0.4992,0.2138,0.2835,0.097,,4
+totalvi_w128,log_mean,1.074,0.9465,0.5016,0.214,0.2835,0.0979,,4
+totalvi_w128,pred_log,0.967,0.8155,0.5098,0.1947,0.2588,0.0782,,4

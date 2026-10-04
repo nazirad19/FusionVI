@@ -1,0 +1,8 @@
+label,scoring,rmsle,abs_bias,residual_sd,spearman,pearson,within_ct_spearman,rmsle_seed_sd,abs_bias_seed_sd,residual_sd_seed_sd,spearman_seed_sd,pearson_seed_sd,within_ct_spearman_seed_sd,n_seeds
+knn (count),calibrated,0.732,0.2116,0.6687,0.2581,0.3379,0.1164,,,,,,,1
+knn (count),raw,0.8025,0.3478,0.6876,0.2587,0.3355,0.1163,,,,,,,1
+knn (log),calibrated,0.7109,0.2079,0.6504,0.2697,0.3548,0.1159,,,,,,,1
+knn (log),raw,0.7124,0.2017,0.6677,0.2704,0.3553,0.1162,,,,,,,1
+rna_ridge (log),calibrated,0.637,0.2025,0.5752,0.3218,0.4244,0.1689,,,,,,,1
+rna_ridge (log),raw,0.6378,0.204,0.5759,0.3218,0.4245,0.1689,,,,,,,1
+seurat_v3_official (count),raw,0.6054,0.1406,0.5762,0.3032,0.4156,0.1338,,,,,,,1

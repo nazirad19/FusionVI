@@ -1,0 +1,116 @@
+{
+  "readouts": {
+    "log_mean": "log1p(E[y]) with background, decoded in the source batch (original metric)",
+    "pred_log": "E[log1p y] over posterior predictive draws from the protein NB mixture",
+    "calibrated": "per-protein affine map fitted on source cells using the target's input-availability route",
+    "ridge": "source-only RNA SVD(128) + ridge, alpha chosen on a D1 validation split"
+  },
+  "decomposition": "RMSLE^2 = bias^2 + residual_sd^2 per protein (log1p units)",
+  "benchmark": "dev_sln206_partial",
+  "scored_proteins": 97,
+  "calibration_route": "observed target panel retained",
+  "biological_metrics": {
+    "within_celltype_spearman": "Spearman within each D2 cell type with at least 30 cells, averaged over cell-type/protein pairs",
+    "marker_auroc": "Mean D2 AUROC for prespecified CD4, CD8a and CD19 targets using source-D1 mixture thresholds"
+  },
+  "calibration_cells": 4000,
+  "posterior_samples": 25,
+  "summary": [
+    {
+      "arm": "fusionvi",
+      "readout": "calibrated",
+      "rmsle": 0.4984,
+      "abs_bias": 0.0132,
+      "residual_sd": 0.4981,
+      "spearman": 0.2156,
+      "pearson": 0.2873,
+      "within_celltype_spearman": 0.1051,
+      "marker_auroc": null,
+      "n_seeds": 4
+    },
+    {
+      "arm": "fusionvi",
+      "readout": "log_mean",
+      "rmsle": 1.0688,
+      "abs_bias": 0.9409,
+      "residual_sd": 0.5008,
+      "spearman": 0.2159,
+      "pearson": 0.2876,
+      "within_celltype_spearman": 0.1058,
+      "marker_auroc": null,
+      "n_seeds": 4
+    },
+    {
+      "arm": "fusionvi",
+      "readout": "pred_log",
+      "rmsle": 0.9635,
+      "abs_bias": 0.812,
+      "residual_sd": 0.5085,
+      "spearman": 0.1961,
+      "pearson": 0.2628,
+      "within_celltype_spearman": 0.0864,
+      "marker_auroc": null,
+      "n_seeds": 4
+    },
+    {
+      "arm": "rna_panel_ridge",
+      "readout": "ridge",
+      "rmsle": 0.488,
+      "abs_bias": 0.0114,
+      "residual_sd": 0.4878,
+      "spearman": 0.3147,
+      "pearson": 0.3831,
+      "within_celltype_spearman": 0.1895,
+      "marker_auroc": null,
+      "n_seeds": 1
+    },
+    {
+      "arm": "rna_ridge",
+      "readout": "ridge",
+      "rmsle": 0.5074,
+      "abs_bias": 0.0118,
+      "residual_sd": 0.5071,
+      "spearman": 0.218,
+      "pearson": 0.2742,
+      "within_celltype_spearman": 0.0898,
+      "marker_auroc": null,
+      "n_seeds": 1
+    },
+    {
+      "arm": "totalvi_w128",
+      "readout": "calibrated",
+      "rmsle": 0.4995,
+      "abs_bias": 0.0125,
+      "residual_sd": 0.4992,
+      "spearman": 0.2138,
+      "pearson": 0.2835,
+      "within_celltype_spearman": 0.097,
+      "marker_auroc": null,
+      "n_seeds": 4
+    },
+    {
+      "arm": "totalvi_w128",
+      "readout": "log_mean",
+      "rmsle": 1.074,
+      "abs_bias": 0.9465,
+      "residual_sd": 0.5016,
+      "spearman": 0.214,
+      "pearson": 0.2835,
+      "within_celltype_spearman": 0.0979,
+      "marker_auroc": null,
+      "n_seeds": 4
+    },
+    {
+      "arm": "totalvi_w128",
+      "readout": "pred_log",
+      "rmsle": 0.967,
+      "abs_bias": 0.8155,
+      "residual_sd": 0.5098,
+      "spearman": 0.1947,
+      "pearson": 0.2588,
+      "within_celltype_spearman": 0.0782,
+      "marker_auroc": null,
+      "n_seeds": 4
+    }
+  ]
+}

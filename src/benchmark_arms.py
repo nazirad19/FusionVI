@@ -32,7 +32,12 @@ def build_model(adata, cfg: dict, arm: dict) -> TOTALVI:
     n_genes = adata.n_vars
     n_proteins = adata.obsm["protein_counts"].shape[1]
     batch_categories = list(adata.obs["batch"].cat.categories)
-    available_batch_indices = [batch_categories.index(cfg["source_batch"])]
+    available_batches = cfg.get("panel_available_batches") or [cfg["source_batch"]]
+    available_batch_indices = [
+        batch_categories.index(batch)
+        for batch in available_batches
+        if batch in batch_categories
+    ]
     common = dict(
         n_latent=int(cfg["n_latent"]),
         n_cat_list=[model.module.n_batch],

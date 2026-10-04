@@ -5,7 +5,7 @@ source-target split, latent size, totalVI decoder and likelihoods, optimizer,
 500-epoch budget, and posterior prediction procedure. The random seed is the
 replication unit.
 
-## Completed result
+## Historical helper-output audit
 
 Sixteen paired seeds were run for FusionVI, the published totalVI configuration,
 and three joint-encoder controls.
@@ -18,11 +18,10 @@ and three joint-encoder controls.
 | Joint plus availability - joint same width | +0.0006 | [-0.0013, +0.0025] | 7/16 | 0.514 |
 | FusionVI - published totalVI | -0.0062 | [-0.0086, -0.0038] | 14/16 | not in control family |
 
-Lower RMSLE is better. FusionVI's small advantage survives controls for encoder
-width, trainable parameter count, and explicit missing-panel information. The
-availability indicator alone did not help. A source-only RNA SVD-ridge baseline
-still achieved RMSLE 0.6379, far below every neural model (1.0539-1.0728), so
-the practical conclusion remains limited to this encoder comparison.
+These values used the efficiency-omitting `get_normalized_expression()` helper
+output and are retained only to document the original analysis. They are not a
+valid count-scale encoder comparison and must not be cited as the Experiment 4
+result. The likelihood-consistent comparison below supersedes them.
 
 ## Where the original parameter saving comes from
 
@@ -70,20 +69,18 @@ consolidated metrics file. `src/param_match.py` recomputes matched widths.
 - `src/evaluate.py` labels its supervised readout `FusionVI-X`; native decoder
   and cross-modal readout results are not pooled.
 
-## Scale-matched and calibrated re-evaluation (no retraining)
+## Likelihood-consistent re-evaluation (no retraining)
 
-RMSLE is minimized by predicting E[log1p y]. The neural arms were scored on
-log1p(E[y]), which is biased upward for over-dispersed counts, while the RNA
-ridge is fit on log1p(y) directly. That alone can create large RMSLE gaps
-between models that rank cells equally well (ridge Spearman 0.322 vs FusionVI
-0.326, yet RMSLE 0.638 vs 1.054). `src/evaluate_calibration.py` reloads each
-saved model and scores D2 three ways:
+scvi-tools 1.4.2 learns a per-protein, per-batch efficiency used by the protein
+likelihood. The normalized-expression helper omits this factor, so
+`src/evaluate_calibration.py` reloads every checkpoint and scores D2 four ways:
 
 | Readout | Definition |
 |---|---|
-| `log_mean` | log1p(E[y]) with background, source-batch decoding (original metric; reproduces scvi's `get_normalized_expression` within Monte Carlo noise) |
-| `pred_log` | E[log1p y]: mean of log1p over posterior predictive draws from the protein NB mixture |
-| `calibrated` | per-protein affine map of `log_mean`, fitted on D1 cells pushed through the same RNA-only encoder route as D2; no D2 truth used |
+| `likelihood_mean` | **Primary:** log1p(E[y]) from `py_norm_`, including the learned efficiency |
+| `likelihood_pred_log` | E[log1p y] from posterior predictive draws using `py_norm_` |
+| `calibrated` | D1 affine head applied to `likelihood_mean`; no D2 truth used |
+| `helper_mean` | Historical helper output from `py_`; efficiency omitted |
 
 Every row reports RMSLE with its decomposition RMSLE² = bias² + residual_sd²,
 plus Spearman and Pearson. The ridge baseline is re-scored on the same cells
@@ -95,14 +92,46 @@ are reported for every readout × metric.
 .\run_calibration.ps1 --arms totalvi fusionvi --seeds 2026 2027
 ```
 
-The completed 16-seed result follows that second pattern. FusionVI's original
-RMSLE difference versus totalVI was -0.0062, but after D1-only calibration it
-was +0.0085 (95% CI -0.0003 to +0.0173; Holm p=0.218). FusionVI also had higher
-residual error (+0.0065) and lower within-cell-type Spearman (0.1640 versus
-0.1681). Marker AUROC was effectively saturated for both models (0.9903 versus
-0.9909). The defensible conclusion is therefore that FusionVI changed output
-scale without adding detectable information about D2 protein variation.
+The primary Experiment 4 claim comes from the seed-paired `likelihood_mean`
+contrasts. A positive rescaling cannot change per-protein Spearman, so a win in
+RMSLE alone supports improved count reconstruction rather than improved
+biological ranking.
 
 The re-evaluation also writes compact within-cell-type summaries and
 source-thresholded CD4/CD8/CD19 AUROCs. Memory scales with posterior draws ×
 batch × genes; lower `batch_size` in `predict` if a GPU runs out of memory.
+
+## Focused totalVI readout audit
+
+The final paper-benchmark analysis tests whether the apparent totalVI-X gain
+survives after restoring totalVI's learned protein-efficiency factor. It
+compares likelihood-consistent totalVI with the former affine totalVI-X
+readout, the totalVI authors' published Seurat v3 target prediction, and
+D1-calibrated RNA ridge and kNN baselines. FusionVI is excluded from this
+focused analysis.
+
+```powershell
+python src/import_official_seurat.py
+python src/compare_methods_calibrated.py --benchmark paper --skip-neural --calib-cells 0 --tag totalvix_baselines
+python src/build_totalvix_benchmark_table.py
+```
+
+The headline outputs are
+`results/totalvi_efficiency_method_benchmark.csv`,
+`results/totalvi_efficiency_vs_methods.csv` and
+`results/totalvix_paper_contrasts.csv`. The official Seurat result can be
+scored raw without R. Generating a D1-calibrated Seurat row still requires R
+with Seurat because it needs five-fold source predictions.
+
+### Learned protein efficiency audit
+
+scvi-tools 1.4.2 learns `log_per_batch_efficiency` and multiplies protein
+rates by its exponential inside the reconstruction likelihood. Its
+`get_normalized_expression()` implementation reads the unscaled `py_` rates,
+whereas the likelihood uses `py_norm_`. The `likelihood_mean` readout restores this
+model-owned factor without fitting a head or using target protein labels.
+The 16-checkpoint audit found that likelihood-consistent totalVI reached 0.5650
+RMSLE, compared with 1.0601 for the helper output and 0.5743 for the D1 affine
+head. The head therefore does not improve correctly read totalVI; its apparent
+gain reconstructed a model-owned scale factor. The name `totalVI-X` is reserved
+for the cross-modal ridge readout in Experiments 1–3.

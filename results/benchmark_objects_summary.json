@@ -1,0 +1,42 @@
+[
+  {
+    "file": "dev_sln111_random.h5ad",
+    "cells": 9264,
+    "source_cells": 7411,
+    "target_cells": 1853,
+    "genes": 4005,
+    "proteins_total": 110,
+    "proteins_hidden_in_target": 110,
+    "target_hidden_entries_in_training_matrix": 0.0
+  },
+  {
+    "file": "dev_sln111_tissue.h5ad",
+    "cells": 9264,
+    "source_cells": 4821,
+    "target_cells": 4443,
+    "genes": 4005,
+    "proteins_total": 110,
+    "proteins_hidden_in_target": 110,
+    "target_hidden_entries_in_training_matrix": 0.0
+  },
+  {
+    "file": "sln206_partial_panel.h5ad",
+    "cells": 15767,
+    "source_cells": 8701,
+    "target_cells": 7066,
+    "genes": 4005,
+    "proteins_total": 207,
+    "proteins_hidden_in_target": 97,
+    "target_hidden_entries_in_training_matrix": 0.0
+  },
+  {
+    "file": "dev_sln206_partial.h5ad",
+    "cells": 8701,
+    "source_cells": 6960,
+    "target_cells": 1741,
+    "genes": 4005,
+    "proteins_total": 207,
+    "proteins_hidden_in_target": 97,
+    "target_hidden_entries_in_training_matrix": 0.0
+  }
+]

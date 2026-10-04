@@ -1,7 +1,8 @@
-"""Plot the scale-matched complete-panel re-evaluation from saved CSV results."""
+"""Plot the likelihood-consistent complete-panel re-evaluation."""
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import matplotlib
@@ -14,16 +15,26 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
-OUT = RESULTS / "figures" / "calibration_benchmark.png"
 COLORS = {"totalvi": "#243B6B", "fusionvi": "#0EA5A4", "rna_ridge": "#F59E0B"}
 LABELS = {"totalvi": "totalVI", "fusionvi": "FusionVI", "rna_ridge": "RNA ridge"}
 
 
 def main() -> None:
-    summary = pd.read_csv(RESULTS / "calibration_summary.csv")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tag", default="likelihood_correct")
+    args = parser.parse_args()
+    suffix = f"_{args.tag}" if args.tag else ""
+    source = RESULTS / f"calibration_summary{suffix}.csv"
+    if not source.exists():
+        raise FileNotFoundError(f"Missing likelihood-consistent results: {source}")
+    summary = pd.read_csv(source)
+    required = {"likelihood_mean", "likelihood_pred_log", "calibrated", "helper_mean"}
+    missing = required - set(summary["readout"])
+    if missing:
+        raise ValueError(f"Missing required likelihood-consistent readouts: {sorted(missing)}")
     neural = summary[summary["arm"].isin(["totalvi", "fusionvi"])].copy()
-    order = ["log_mean", "pred_log", "calibrated"]
-    readout_labels = ["log1p(E[y])\noriginal", "E[log1p y]\nposterior", "D1 affine\ncalibrated"]
+    order = ["likelihood_mean", "likelihood_pred_log", "calibrated"]
+    readout_labels = ["Likelihood mean\n(primary)", "Predictive log mean\n(secondary)", "D1 affine head\n(secondary)"]
 
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10})
     fig, axes = plt.subplots(1, 3, figsize=(14.5, 4.8), constrained_layout=True)
@@ -44,9 +55,9 @@ def main() -> None:
     axes[0].legend(frameon=False, fontsize=9)
 
     # B: show that calibration removes offset while leaving residual spread.
-    groups = [("log_mean", "abs_bias"), ("log_mean", "residual_sd"),
+    groups = [("likelihood_mean", "abs_bias"), ("likelihood_mean", "residual_sd"),
               ("calibrated", "abs_bias"), ("calibrated", "residual_sd")]
-    group_labels = ["Original\n|bias|", "Original\nresidual", "Calibrated\n|bias|", "Calibrated\nresidual"]
+    group_labels = ["Likelihood\n|bias|", "Likelihood\nresidual", "D1 head\n|bias|", "D1 head\nresidual"]
     width = 0.35
     gx = np.arange(len(groups))
     for offset, arm in ((-width / 2, "totalvi"), (width / 2, "fusionvi")):
@@ -72,18 +83,19 @@ def main() -> None:
     axes[2].set_yticks(cy, metric_labels)
     axes[2].set_xlim(0, 1.08)
     axes[2].set_xlabel("Metric value")
-    axes[2].set_title("C  Information recovery is similar", loc="left", weight="bold")
+    axes[2].set_title("C  Ranking metrics favor totalVI", loc="left", weight="bold")
     axes[2].legend(frameon=False, fontsize=9, loc="center", bbox_to_anchor=(0.68, 0.48))
 
     for ax in axes:
         ax.grid(axis="y", color="#DCE3EC", linewidth=0.8)
         ax.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("Scale-matched re-evaluation of the complete-panel benchmark", x=0.02,
+    fig.suptitle("Likelihood-consistent re-evaluation of the complete-panel benchmark", x=0.02,
                  ha="left", fontsize=17, weight="bold", color="#172554")
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT, dpi=220, bbox_inches="tight", facecolor="white")
+    out = RESULTS / "figures" / f"calibration_benchmark{suffix}.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(OUT)
+    print(out)
 
 
 if __name__ == "__main__":

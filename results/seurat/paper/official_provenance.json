@@ -1,0 +1,12 @@
+{
+  "url": "https://raw.githubusercontent.com/YosefLab/totalVI_reproducibility/master/harmonization/seurat_harmo_results/imputed_sln.csv",
+  "source_shape_proteins_by_cells": [
+    110,
+    7564
+  ],
+  "saved_shape_cells_by_proteins": [
+    7564,
+    110
+  ],
+  "use": "raw target scoring only; no source cross-fit predictions are available"
+}

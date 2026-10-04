@@ -1,0 +1,11 @@
+{
+  "benchmark": "paper",
+  "scored_proteins": 110,
+  "posterior_samples": 25,
+  "calibration": "per-protein affine on source cells, identical for every method, fixed before scoring",
+  "source_predictions": {
+    "rna_ridge/knn/seurat_v3": "5-fold cross-fitted",
+    "neural": "route-matched, in-sample"
+  },
+  "neural_calibration_cells": 9264
+}

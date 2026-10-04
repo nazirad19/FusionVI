@@ -18,6 +18,7 @@ from scipy.stats import pearsonr, spearmanr
 from scvi.model import TOTALVI
 
 from benchmark_arms import build_model, n_trainable
+from benchmarks import data_path, eval_proteins, load_config, models_dir, runs_dir
 
 LABELS = {"totalvi": "totalVI", "fusionvi": "FusionVI"}
 
@@ -50,17 +51,19 @@ def main() -> None:
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--accelerator", default="auto")
+    parser.add_argument("--benchmark", default="paper",
+                        help="benchmark name from `benchmarks:` in config/paper_benchmark.yaml")
     parser.add_argument("--smoke-cells", type=int, default=None,
                         help="subsample cells for a quick CPU smoke test; results go to a separate folder")
     args = parser.parse_args()
-    with (ROOT / "config" / "paper_benchmark.yaml").open() as handle:
-        cfg = yaml.safe_load(handle)
+    cfg = load_config(args.benchmark)
     arm = cfg["arms"][args.model]
     label = LABELS.get(args.model, args.model)
-    global RUNS, MODELS
+    global RUNS, MODELS, DATA
+    DATA, RUNS, MODELS = data_path(cfg), runs_dir(cfg), models_dir(cfg)
     if args.smoke_cells:
-        RUNS = ROOT / "results" / "smoke_runs"
-        MODELS = ROOT / "models" / "smoke"
+        RUNS = ROOT / "results" / "smoke_runs" / args.benchmark
+        MODELS = ROOT / "models" / "smoke" / args.benchmark
 
     run_name = f"{args.model}__seed{args.seed}"
     run_dir = RUNS / run_name
@@ -117,7 +120,7 @@ def main() -> None:
         scale_protein=False,
         return_numpy=False,
     )
-    truth = target.obsm["protein_truth"].astype(float)
+    truth = target.obsm["protein_truth"].astype(float)[eval_proteins(adata)]
     predicted = predicted.loc[truth.index, truth.columns].clip(lower=0.0)
     _, predicted_foreground = model.get_normalized_expression(
         target,
@@ -179,6 +182,7 @@ def main() -> None:
         "gate_mode": arm.get("gate"),
         "modality_dropout": float(arm.get("modality_dropout", 0.0)),
         "seed": args.seed,
+        "benchmark": args.benchmark,
         "configured_max_epochs": effective_max_epochs,
         "epochs_completed": int(model.history["elbo_train"].shape[0]),
         "trainable_parameters": n_trainable(model),

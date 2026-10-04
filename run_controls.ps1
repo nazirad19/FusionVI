@@ -6,7 +6,9 @@
 param(
     [int]$Tier = 1,
     [int[]]$Seeds,
-    [string]$PythonPath
+    [string]$PythonPath,
+    [string]$Benchmark = 'paper',
+    [string[]]$Arms
 )
 $ErrorActionPreference = 'Stop'
 $env:MPLCONFIGDIR = Join-Path $PSScriptRoot '.mpl'
@@ -19,20 +21,27 @@ $src = Join-Path $PSScriptRoot 'src'
 & $python (Join-Path $src 'download_data.py')
 $data = Join-Path $PSScriptRoot 'data\processed\paper_figure3_missing_protein.h5ad'
 if (-not (Test-Path $data)) { & $python (Join-Path $src 'prepare_paper_benchmark.py') }
+if ($Benchmark -ne 'paper') {
+    $benchFile = & $python -c "import yaml;c=yaml.safe_load(open(r'$PSScriptRoot\config\paper_benchmark.yaml'));print(c['benchmarks']['$Benchmark']['data'])"
+    if (-not (Test-Path (Join-Path $PSScriptRoot "data\processed\$benchFile"))) {
+        & $python (Join-Path $src 'prepare_benchmarks.py')
+    }
+}
 
 $cfg = & $python -c "import yaml,json;c=yaml.safe_load(open(r'$PSScriptRoot\config\paper_benchmark.yaml'));print(json.dumps({'arms':{k:v.get('tier',0) for k,v in c['arms'].items()},'seeds':c['control_seeds']}))" | ConvertFrom-Json
-$arms = $cfg.arms.PSObject.Properties | Where-Object { $_.Value -le $Tier } | ForEach-Object { $_.Name }
+$arms = if ($Arms) { $Arms } else { $cfg.arms.PSObject.Properties | Where-Object { $_.Value -le $Tier } | ForEach-Object { $_.Name } }
 $runSeeds = if ($Seeds) { $Seeds } else { @($cfg.seeds) }
-Write-Host "Arms: $($arms -join ', ')  Seeds: $($runSeeds -join ', ')"
+Write-Host "Benchmark: $Benchmark  Arms: $($arms -join ', ')  Seeds: $($runSeeds -join ', ')"
 
 # Seed-major order: every arm gets seed k before any arm gets seed k+1,
 # so a partial run still yields balanced paired comparisons.
 foreach ($seed in $runSeeds) {
     foreach ($arm in $arms) {
-        & $python (Join-Path $src 'train_paper_benchmark.py') --arm $arm --seed $seed
+        & $python (Join-Path $src 'train_paper_benchmark.py') --arm $arm --seed $seed --benchmark $Benchmark
         if ($LASTEXITCODE -ne 0) { throw "Failed: $arm / seed $seed" }
     }
 }
 Push-Location $src
-& $python 'evaluate_controls.py'
+if ($Benchmark -eq 'paper') { & $python 'evaluate_controls.py' }
+& $python 'evaluate_calibration.py' --benchmark $Benchmark --arms $arms --seeds $runSeeds
 Pop-Location

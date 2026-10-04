@@ -1,0 +1,11 @@
+candidate,reference,metric,n_seeds,candidate_minus_reference,ci95_low,ci95_high,candidate_wins,p_t
+totalVI-X,totalVI native,rmsle,1,-0.4754693661033276,,,1,
+totalVI-X,totalVI native,global_rmsle,1,-0.47152103599225226,,,1,
+totalVI-X,totalVI native,spearman,1,-0.0036724140168793995,,,0,
+totalVI-X,totalVI native,pearson,1,-0.007322018172450706,,,0,
+totalVI-X,totalVI native,within_celltype_spearman,1,0.0031500780688764607,,,1,
+totalVI-X,totalVI calibrated,rmsle,1,0.012109862405297656,,,0,
+totalVI-X,totalVI calibrated,global_rmsle,1,0.014340048392983973,,,0,
+totalVI-X,totalVI calibrated,spearman,1,-0.0036723553063282566,,,0,
+totalVI-X,totalVI calibrated,pearson,1,-0.007328674524800183,,,0,
+totalVI-X,totalVI calibrated,within_celltype_spearman,1,0.0031500634437415242,,,1,

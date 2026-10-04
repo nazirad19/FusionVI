@@ -1,0 +1,21 @@
+{
+  "frozen_before_final_test": "2026-10-04T13:25:00+04:00",
+  "development_benchmark": "dev_sln206_partial",
+  "final_benchmark": "sln206_partial",
+  "candidate": "fusionvi",
+  "reference": "totalvi_w128",
+  "seeds": [2026, 2027, 2028, 2029],
+  "max_epochs": 500,
+  "early_stopping_patience": 45,
+  "primary_metrics": ["calibrated_rmsle", "within_celltype_spearman"],
+  "hard_baseline": "RNA SVD plus 110 observed target-panel proteins and multi-output ridge",
+  "development_result": {
+    "fusionvi_calibrated_rmsle": 0.4984,
+    "totalvi_w128_calibrated_rmsle": 0.4995,
+    "fusionvi_within_celltype_spearman": 0.1051,
+    "totalvi_w128_within_celltype_spearman": 0.0970,
+    "paired_within_celltype_difference": 0.0081,
+    "paired_ci95": [0.0042, 0.0119],
+    "wins": "4/4"
+  }
+}

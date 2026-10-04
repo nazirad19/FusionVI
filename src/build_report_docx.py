@@ -181,22 +181,50 @@ def main() -> None:
     availability = contrasts[("FusionVI", "totalvi_avail_w128")]
     indicator_only = contrasts[("totalvi_avail_w128", "totalvi_w128")]
     original_16 = contrasts[("FusionVI", "totalVI")]
-    calibration = pd.read_csv(ROOT / "results" / "calibration_summary.csv").set_index(["arm", "readout"])
-    calibration_contrasts = pd.read_csv(ROOT / "results" / "calibration_contrasts.csv")
+    calibration = pd.read_csv(ROOT / "results" / "calibration_summary_likelihood_correct.csv").set_index(["arm", "readout"])
+    calibration_contrasts = pd.read_csv(ROOT / "results" / "calibration_contrasts_likelihood_correct.csv")
+    required_readouts = {"likelihood_mean", "likelihood_pred_log", "calibrated", "helper_mean"}
+    missing_readouts = required_readouts - set(calibration.index.get_level_values("readout"))
+    if missing_readouts:
+        raise ValueError(f"Missing likelihood-consistent readouts: {sorted(missing_readouts)}")
+    partial = pd.read_csv(ROOT / "results" / "calibration_summary_sln206_partial.csv").set_index(["arm", "readout"])
+    partial_contrasts = pd.read_csv(ROOT / "results" / "calibration_contrasts_sln206_partial.csv")
 
     def cal(arm: str, readout: str, metric: str) -> float:
         return float(calibration.loc[(arm, readout), metric])
 
-    def cal_contrast(metric: str) -> dict:
+    def cal_contrast(metric: str, candidate: str = "fusionvi", reference: str = "totalvi",
+                     readout: str = "likelihood_mean") -> dict:
         row = calibration_contrasts[
-            (calibration_contrasts["readout"] == "calibrated")
+            (calibration_contrasts["readout"] == readout)
             & (calibration_contrasts["metric"] == metric)
-            & (calibration_contrasts["reference"] == "totalvi")
+            & (calibration_contrasts["candidate"] == candidate)
+            & (calibration_contrasts["reference"] == reference)
         ].iloc[0]
         return row.to_dict()
 
-    calibrated_rmsle = cal_contrast("rmsle")
-    calibrated_residual = cal_contrast("residual_sd")
+    def partial_value(arm: str, readout: str, metric: str) -> float:
+        return float(partial.loc[(arm, readout), metric])
+
+    def partial_contrast(metric: str, readout: str = "calibrated") -> dict:
+        row = partial_contrasts[
+            (partial_contrasts["readout"] == readout)
+            & (partial_contrasts["metric"] == metric)
+            & (partial_contrasts["reference"] == "totalvi_w128")
+        ].iloc[0]
+        return row.to_dict()
+
+    likelihood_rmsle = cal_contrast("rmsle")
+    likelihood_same_width = cal_contrast("rmsle", reference="totalvi_w128")
+    likelihood_pmatch = cal_contrast("rmsle", reference="totalvi_pmatch")
+    likelihood_availability = cal_contrast("rmsle", reference="totalvi_avail_w128")
+    availability_indicator = cal_contrast("rmsle", candidate="totalvi_avail_w128", reference="totalvi_w128")
+    likelihood_within = cal_contrast("within_celltype_spearman")
+    partial_rmsle = partial_contrast("rmsle")
+    partial_spearman = partial_contrast("spearman")
+    partial_within = partial_contrast("within_celltype_spearman")
+    partial_pearson = partial_contrast("pearson")
+    partial_residual = partial_contrast("residual_sd")
     relative = 100 * (paper["totalvi_mean_rmsle"] - paper["fusionvi_mean_rmsle"]) / paper["totalvi_mean_rmsle"]
     parameter_reduction = 100 * (paper["totalvi_parameters"] - paper["fusionvi_parameters"]) / paper["totalvi_parameters"]
 
@@ -207,7 +235,7 @@ def main() -> None:
     title.add_run("FusionVI multimodal validation experiments")
     subtitle = doc.add_paragraph()
     subtitle.paragraph_format.space_after = Pt(12)
-    run = subtitle.add_run("Technical report covering four biomarker recovery and perturbation transfer studies")
+    run = subtitle.add_run("Technical report covering five biomarker recovery and perturbation transfer studies")
     run.font.name = "Arial"
     run.font.size = Pt(15.5)
     run.font.color.rgb = RGBColor(23, 37, 84)
@@ -218,12 +246,14 @@ def main() -> None:
     doc.add_heading("Abstract", level=1)
     doc.add_paragraph(
         "FusionVI tests whether modality-specific encoding improves recovery of therapeutic surface biomarkers when protein "
-        "measurements are hidden, discordant with RNA or observed under an unseen perturbation. Four completed experiments "
+        "measurements are hidden, discordant with RNA or observed under an unseen perturbation. Five completed experiments "
         "cover held-out human donors, held-out CRISPR targets, cross-mouse transfer and the full missing-protein-panel benchmark "
         "from the totalVI paper. The evidence is deliberately mixed: multimodal context is useful in the PD-L1 perturbation task, "
         "while targeted marker studies show that measured protein context often matters more than the learned latent. In the "
-        "complete-panel benchmark, FusionVI has a small advantage only under the original log1p-of-mean readout. A D1-only "
-        "calibration removes that advantage, while residual and within-cell-type metrics slightly favour totalVI. "
+        "complete-panel benchmark, likelihood-consistent totalVI outperforms FusionVI on RMSLE and within-cell-type ranking; the "
+        "earlier apparent advantage came from an efficiency-omitting helper readout. In the original-paper SLN206 partial-panel benchmark, where 110 proteins remain "
+        "observed and 97 are hidden in the target mouse, FusionVI improves global and within-cell-type ranking over a same-width "
+        "totalVI control in all four frozen seeds, although calibrated RMSLE is tied and a linear RNA-plus-panel baseline remains stronger. "
         "These results support a bounded biomarker-completion "
         "and perturbation-ranking contribution."
     )
@@ -242,7 +272,8 @@ def main() -> None:
             ["Lawlor activation", "10 human donors", "Native encoders close; cross-modal context supplied most of the marker-recovery gain"],
             ["Papalexi PD-L1", "25 CRISPR targets", "FusionVI-X reached 0.879 effect Spearman and 84.0% direction accuracy"],
             ["SLN111 targeted markers", "2 mice", "Protein context + RNA reached 0.670; either latent added no more than 0.003"],
-            ["SLN111 complete panel", "16 paired seeds", "Raw RMSLE lead vanished after D1-only calibration; information metrics did not improve"],
+            ["SLN111 complete panel", "16 paired seeds", "FusionVI did not beat likelihood-consistent totalVI on RMSLE or within-cell-type ranking"],
+            ["SLN206 partial panel", "4 frozen paired seeds", "FusionVI improved ranking over same-width totalVI; calibrated RMSLE tied and ridge remained stronger"],
         ],
         [1.55, 1.35, 3.85],
     )
@@ -259,7 +290,6 @@ def main() -> None:
         "and X-readout results are reported separately so the encoder contribution is not confused with the supervised readout."
     )
 
-    doc.add_page_break()
     doc.add_heading("Experiment 1 Lawlor donor held out activation", level=1)
     doc.add_heading("Biological question and design", level=2)
     doc.add_paragraph(
@@ -360,67 +390,101 @@ def main() -> None:
         "for evaluation. Decoder, likelihoods, latent size, optimizer, split and prediction procedure were controlled. Sixteen "
         "paired seeds were run for FusionVI, totalVI and all three Tier 1 controls."
     )
-    add_table(
-        doc,
-        ["Model", "Encoder comparison", "Mean RMSLE", "Difference vs FusionVI"],
-        [
-            ["FusionVI", "Separate branches and learned gate", f"{cmeans['FusionVI']:.4f}", "reference"],
-            ["totalVI", "Published joint encoder, width 256", f"{cmeans['totalVI']:.4f}", f"{-original_16['rmsle_diff']:+.4f}"],
-            ["Joint same width", "Width 128", f"{cmeans['totalvi_w128']:.4f}", f"{-same_width['rmsle_diff']:+.4f}"],
-            ["Joint parameter matched", "Width 70", f"{cmeans['totalvi_pmatch']:.4f}", f"{-param_match['rmsle_diff']:+.4f}"],
-            ["Joint plus availability", "Width 128 and panel indicator", f"{cmeans['totalvi_avail_w128']:.4f}", f"{-availability['rmsle_diff']:+.4f}"],
-        ],
-        [1.50, 2.65, 1.20, 1.45],
-    )
-    add_result_lead(doc, "Result  The original RMSLE lead is principally an output-scale effect.")
     doc.add_paragraph(
-        f"Against the same-width joint encoder, FusionVI reduced RMSLE by {abs(same_width['rmsle_diff']):.4f} "
-        f"(95% CI {same_width['ci95_low']:+.4f} to {same_width['ci95_high']:+.4f}; Holm p={same_width['p_holm']:.2g}) "
-        f"and won {same_width['seeds_candidate_better']}/16 seeds. Against the parameter-matched encoder, the reduction was "
-        f"{abs(param_match['rmsle_diff']):.4f} (95% CI {param_match['ci95_low']:+.4f} to {param_match['ci95_high']:+.4f}; "
-        f"Holm p={param_match['p_holm']:.2g}) with 16/16 wins. Against the missingness-aware joint encoder, the reduction was "
-        f"{abs(availability['rmsle_diff']):.4f} (95% CI {availability['ci95_low']:+.4f} to {availability['ci95_high']:+.4f}; "
-        f"Holm p={availability['p_holm']:.2g}) with {availability['seeds_candidate_better']}/16 wins. The availability indicator "
-        f"alone did not help (difference {indicator_only['rmsle_diff']:+.4f}; p={indicator_only['p_t']:.2f})."
-    )
-    doc.add_paragraph(
-        "Every checkpoint was then re-scored without retraining. Posterior E[log1p y] reduced both models' error, and a per-protein "
-        "affine calibration fitted only on D1 RNA-only predictions reduced mean RMSLE to "
-        f"{cal('totalvi', 'calibrated', 'rmsle'):.4f} for totalVI and {cal('fusionvi', 'calibrated', 'rmsle'):.4f} for FusionVI. "
-        f"The calibrated difference was {calibrated_rmsle['fusionvi_minus_ref']:+.4f} (95% CI "
-        f"{calibrated_rmsle['ci95_low']:+.4f} to {calibrated_rmsle['ci95_high']:+.4f}; Holm p="
-        f"{calibrated_rmsle['p_holm_within_readout_metric']:.3f})."
+        "The primary readout is the likelihood-consistent expected count from py_norm_, including each checkpoint's learned "
+        "protein efficiency. The efficiency-omitting helper output is retained only as a historical audit."
     )
     add_table(
         doc,
-        ["Readout", "totalVI", "FusionVI", "FusionVI − totalVI"],
+        ["Encoder", "Mean RMSLE", "Overall Spearman", "Within-cell-type Spearman"],
         [
-            ["Original log1p(E[y])", f"{cal('totalvi', 'log_mean', 'rmsle'):.4f}", f"{cal('fusionvi', 'log_mean', 'rmsle'):.4f}", f"{original_16['rmsle_diff']:+.4f}"],
-            ["Posterior E[log1p y]", f"{cal('totalvi', 'pred_log', 'rmsle'):.4f}", f"{cal('fusionvi', 'pred_log', 'rmsle'):.4f}", f"{cal('fusionvi', 'pred_log', 'rmsle')-cal('totalvi', 'pred_log', 'rmsle'):+.4f}"],
-            ["D1-only calibrated", f"{cal('totalvi', 'calibrated', 'rmsle'):.4f}", f"{cal('fusionvi', 'calibrated', 'rmsle'):.4f}", f"{calibrated_rmsle['fusionvi_minus_ref']:+.4f}"],
-            ["RNA SVD-ridge", f"{cal('rna_ridge', 'ridge', 'rmsle'):.4f}", "—", "—"],
+            ["Published totalVI", f"{cal('totalvi', 'likelihood_mean', 'rmsle'):.4f}", f"{cal('totalvi', 'likelihood_mean', 'spearman'):.4f}", f"{cal('totalvi', 'likelihood_mean', 'within_celltype_spearman'):.4f}"],
+            ["Joint same width", f"{cal('totalvi_w128', 'likelihood_mean', 'rmsle'):.4f}", f"{cal('totalvi_w128', 'likelihood_mean', 'spearman'):.4f}", f"{cal('totalvi_w128', 'likelihood_mean', 'within_celltype_spearman'):.4f}"],
+            ["Joint plus availability", f"{cal('totalvi_avail_w128', 'likelihood_mean', 'rmsle'):.4f}", f"{cal('totalvi_avail_w128', 'likelihood_mean', 'spearman'):.4f}", f"{cal('totalvi_avail_w128', 'likelihood_mean', 'within_celltype_spearman'):.4f}"],
+            ["FusionVI", f"{cal('fusionvi', 'likelihood_mean', 'rmsle'):.4f}", f"{cal('fusionvi', 'likelihood_mean', 'spearman'):.4f}", f"{cal('fusionvi', 'likelihood_mean', 'within_celltype_spearman'):.4f}"],
+            ["Joint parameter matched", f"{cal('totalvi_pmatch', 'likelihood_mean', 'rmsle'):.4f}", f"{cal('totalvi_pmatch', 'likelihood_mean', 'spearman'):.4f}", f"{cal('totalvi_pmatch', 'likelihood_mean', 'within_celltype_spearman'):.4f}"],
         ],
-        [2.75, 1.30, 1.30, 1.70],
+        [2.35, 1.35, 1.45, 1.75],
+    )
+    add_result_lead(doc, "Result  FusionVI did not improve the likelihood-consistent paper benchmark.")
+    doc.add_paragraph(
+        f"FusionVI was worse than published totalVI by {likelihood_rmsle['candidate_minus_ref']:+.4f} RMSLE "
+        f"(95% CI {likelihood_rmsle['ci95_low']:+.4f} to {likelihood_rmsle['ci95_high']:+.4f}; "
+        f"{likelihood_rmsle['seeds_candidate_better']}/16 seed wins; Holm p={likelihood_rmsle['p_holm_within_readout_metric']:.2g}). "
+        f"It was worse than the same-width control by {likelihood_same_width['candidate_minus_ref']:+.4f} and the availability-aware "
+        f"control by {likelihood_availability['candidate_minus_ref']:+.4f}. It beat only the smaller parameter-matched control by "
+        f"{abs(likelihood_pmatch['candidate_minus_ref']):.4f}. The availability indicator itself did not help: its difference versus "
+        f"the same-width control was {availability_indicator['candidate_minus_ref']:+.4f} (Holm p="
+        f"{availability_indicator['p_holm_within_readout_metric']:.3f})."
     )
     doc.add_paragraph(
-        f"FusionVI's calibrated residual error was higher by {calibrated_residual['fusionvi_minus_ref']:+.4f}. Mean within-cell-type "
-        f"Spearman was {cal('fusionvi', 'calibrated', 'within_celltype_spearman'):.4f} for FusionVI versus "
-        f"{cal('totalvi', 'calibrated', 'within_celltype_spearman'):.4f} for totalVI; marker AUROC was approximately 0.99 for both. "
-        f"The widened RNA ridge reached {cal('rna_ridge', 'ridge', 'rmsle'):.4f} RMSLE, so calibrated neural predictions actually "
-        "outperformed it on aggregate error. The earlier ridge gap was therefore also largely a scale effect."
+        f"FusionVI's within-cell-type Spearman was {cal('fusionvi', 'likelihood_mean', 'within_celltype_spearman'):.4f}, compared with "
+        f"{cal('totalvi', 'likelihood_mean', 'within_celltype_spearman'):.4f} for published totalVI (difference "
+        f"{likelihood_within['candidate_minus_ref']:+.4f}; Holm p={likelihood_within['p_holm_within_readout_metric']:.2g}). "
+        f"The D1 affine head worsened RMSLE after efficiency restoration: totalVI changed from "
+        f"{cal('totalvi', 'likelihood_mean', 'rmsle'):.4f} to {cal('totalvi', 'calibrated', 'rmsle'):.4f}, and FusionVI changed "
+        f"from {cal('fusionvi', 'likelihood_mean', 'rmsle'):.4f} to {cal('fusionvi', 'calibrated', 'rmsle'):.4f}."
     )
-    add_figure(doc, ROOT / "results" / "figures" / "calibration_benchmark.png", "Figure 4. Scale-matched complete-panel evaluation across 16 paired seeds.", 6.70)
+    add_figure(doc, ROOT / "results" / "figures" / "calibration_benchmark_likelihood_correct.png", "Figure 4. Likelihood-consistent complete-panel evaluation across 16 paired seeds.", 6.70)
+
+    doc.add_page_break()
+    doc.add_heading("Experiment 5 original totalVI partial panel transfer", level=1)
+    doc.add_heading("Biological question and design", level=2)
+    doc.add_paragraph(
+        "Can a model use an observed surface-protein panel to recover additional therapeutic biomarkers in an unseen animal? "
+        "The official SLN206 object from the totalVI study contains 207 proteins. In the target batch D2, the 110 proteins shared "
+        "with the source panel remain available, while the other 97 proteins are hidden and scored against their measured values. "
+        "This partial-panel design activates FusionVI's protein branch and tests cross-mouse biomarker completion rather than "
+        "complete reconstruction from RNA alone. The model choice and analysis plan were frozen on source-only development splits "
+        "before D2 was evaluated. FusionVI and a same-width totalVI control were then trained for seeds 2026 to 2029 under the same "
+        "500-epoch budget. Calibration was fitted only on source cells routed through the corresponding missing-target pattern. "
+        "Experiment 5 is unaffected by the Experiment 4 readout correction: positive per-protein efficiency scaling cannot change "
+        "its Spearman metrics, and its D1 affine calibration absorbs the constant scale."
+    )
+    add_table(
+        doc,
+        ["Model", "Calibrated RMSLE", "Global Spearman", "Within-cell-type Spearman"],
+        [
+            ["FusionVI", f"{partial_value('fusionvi', 'calibrated', 'rmsle'):.4f}", f"{partial_value('fusionvi', 'calibrated', 'spearman'):.4f}", f"{partial_value('fusionvi', 'calibrated', 'within_celltype_spearman'):.4f}"],
+            ["Same-width totalVI", f"{partial_value('totalvi_w128', 'calibrated', 'rmsle'):.4f}", f"{partial_value('totalvi_w128', 'calibrated', 'spearman'):.4f}", f"{partial_value('totalvi_w128', 'calibrated', 'within_celltype_spearman'):.4f}"],
+            ["RNA plus observed-panel ridge", f"{partial_value('rna_panel_ridge', 'ridge', 'rmsle'):.4f}", f"{partial_value('rna_panel_ridge', 'ridge', 'spearman'):.4f}", f"{partial_value('rna_panel_ridge', 'ridge', 'within_celltype_spearman'):.4f}"],
+            ["RNA-only ridge", f"{partial_value('rna_ridge', 'ridge', 'rmsle'):.4f}", f"{partial_value('rna_ridge', 'ridge', 'spearman'):.4f}", f"{partial_value('rna_ridge', 'ridge', 'within_celltype_spearman'):.4f}"],
+        ],
+        [2.45, 1.45, 1.45, 1.80],
+    )
+    add_result_lead(doc, "Result  FusionVI improved biological ranking over same-width totalVI, but not aggregate calibrated RMSLE.")
+    doc.add_paragraph(
+        f"FusionVI increased global Spearman by {partial_spearman['candidate_minus_ref']:+.4f} "
+        f"(95% CI {partial_spearman['ci95_low']:+.4f} to {partial_spearman['ci95_high']:+.4f}; p={partial_spearman['p_holm_within_readout_metric']:.4f}) "
+        f"and within-cell-type Spearman by {partial_within['candidate_minus_ref']:+.4f} "
+        f"(95% CI {partial_within['ci95_low']:+.4f} to {partial_within['ci95_high']:+.4f}; p={partial_within['p_holm_within_readout_metric']:.4f}). "
+        "FusionVI won all four seeds on both ranking metrics. Pearson correlation also increased by "
+        f"{partial_pearson['candidate_minus_ref']:+.4f}, and residual standard deviation decreased by "
+        f"{partial_residual['candidate_minus_ref']:+.4f}. Calibrated RMSLE was effectively tied: "
+        f"{partial_value('fusionvi', 'calibrated', 'rmsle'):.4f} for FusionVI and "
+        f"{partial_value('totalvi_w128', 'calibrated', 'rmsle'):.4f} for totalVI "
+        f"(difference {partial_rmsle['candidate_minus_ref']:+.4f}; 95% CI {partial_rmsle['ci95_low']:+.4f} to "
+        f"{partial_rmsle['ci95_high']:+.4f})."
+    )
+    doc.add_paragraph(
+        "The RNA-plus-observed-panel ridge remained the strongest method, reaching 0.5093 calibrated RMSLE and 0.2036 "
+        "within-cell-type Spearman. The neural comparison therefore supports a specific architectural gain in ranking relative "
+        "to same-width totalVI, rather than state-of-the-art performance on the task."
+    )
+    add_figure(doc, ROOT / "results" / "figures" / "sln206_partial_benchmark.png", "Figure 5. Frozen SLN206 partial-panel benchmark on the untouched D2 target batch.", 6.70)
 
     doc.add_heading("Combined interpretation", level=1)
     doc.add_paragraph(
-        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment shows that "
-        "FusionVI's original RMSLE lead is mainly calibration, while scale-free and residual metrics do not support stronger "
-        "biological recovery. When other proteins remain "
-        "available, measured protein context often contributes more than the learned latent. The Papalexi result shows that multimodal context "
+        "The experiments support a narrow and biologically coherent contribution. On the complete-panel experiment, "
+        "likelihood-consistent totalVI has lower RMSLE and stronger within-cell-type ranking than FusionVI. When a substantial protein panel remains observed, "
+        "the SLN206 experiment shows a small but consistent FusionVI ranking advantage over same-width totalVI. Measured protein "
+        "context remains important, and a simple ridge baseline still performs best. The Papalexi result shows that multimodal context "
         "can rank unseen PD-L1 perturbation effects, while the CMTM6 failure exposes a post-transcriptional boundary."
     )
-    add_bullet(doc, "Controlled benchmark result: the raw FusionVI RMSLE lead disappears after D1-only calibration.")
-    add_bullet(doc, "Scale diagnosis: calibration improves both neural models below the RNA ridge aggregate RMSLE.")
+    add_bullet(doc, "Controlled benchmark result: FusionVI does not improve the likelihood-consistent complete-panel benchmark.")
+    add_bullet(doc, "Positive architectural result: FusionVI improves global and within-cell-type ranking in partial-panel transfer across all four frozen seeds.")
+    add_bullet(doc, "Hard-baseline result: RNA plus observed-protein ridge remains stronger than both neural models on SLN206.")
+    add_bullet(doc, "Readout diagnosis: the original apparent advantage came from omitting the learned protein-efficiency factor.")
     add_bullet(doc, "Positive result: improved ranking and direction of unseen PD-L1 perturbation effects.")
     add_bullet(doc, "Negative result: the encoder alone did not consistently improve donor-held-out marker recovery.")
     add_bullet(doc, "Boundary condition: RNA-centered evidence can fail for protein-stability mechanisms such as CMTM6.")
@@ -434,13 +498,15 @@ def main() -> None:
     add_bullet(doc, "Papalexi: one IFN-gamma-treated cell line and 25 molecular perturbations.")
     add_bullet(doc, "Targeted SLN111 transfer: two mice, sufficient only for a technical check.")
     add_bullet(doc, "Complete-panel benchmark: one source-target batch pair and 16 seeds rather than the paper's 30.")
+    add_bullet(doc, "Partial-panel benchmark: one source-target batch pair and four frozen paired seeds; the small seed count limits precision.")
     add_bullet(doc, "Same-width, parameter-matched and missingness-aware controls are complete; modality-dropout arms remain pending.")
     add_bullet(doc, "Seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.")
     add_bullet(doc, "Native and X-readout results are separated throughout the report.")
     add_bullet(doc, "Overall, within-cell-type and CD4/CD8/CD19 AUROC metrics are complete for all Tier 0/1 arms; modality-dropout arms remain pending.")
-    add_bullet(doc, "Calibration outputs are stored in results/calibration_summary.csv and calibration_contrasts.csv.")
+    add_bullet(doc, "Likelihood-consistent outputs are stored in results/calibration_summary_likelihood_correct.csv and calibration_contrasts_likelihood_correct.csv.")
+    add_bullet(doc, "Partial-panel outputs are stored in results/calibration_summary_sln206_partial.csv and calibration_contrasts_sln206_partial.csv.")
     doc.add_paragraph(
-        "The current full-panel benchmark is reproduced with .\\run_paper_benchmark.ps1. The original Lawlor and Papalexi training "
+        "The current full-panel benchmark is reproduced with run_paper_benchmark.ps1. The original Lawlor and Papalexi training "
         "pipelines were not retained, so Experiments 1 and 2 are documented from saved held-out predictions, metrics and figures and "
         "are not reproducible from a fresh clone. The versioned Papalexi effect table reproduces the target-cluster bootstrap."
     )

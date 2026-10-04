@@ -39,6 +39,12 @@ arms:
   totalvi_moddrop:    {encoder: joint_moddrop,   hidden: 256, modality_dropout: 0.30, tier: 3}
   totalvi_w128_moddrop: {encoder: joint_moddrop, hidden: 128, modality_dropout: 0.30, tier: 3}
   fusionvi_moddrop:   {encoder: fusion,          hidden: 128, gate: learned, modality_dropout: 0.30, tier: 3}
+  # Frozen follow-up sweep. These arms differ from published totalVI only in
+  # the fraction of source cells whose protein encoder input is hidden while
+  # their measured proteins remain targets of the protein likelihood.
+  totalvi_moddrop_p25: {encoder: joint_moddrop,  hidden: 256, modality_dropout: 0.25, tier: 3}
+  totalvi_moddrop_p50: {encoder: joint_moddrop,  hidden: 256, modality_dropout: 0.50, tier: 3}
+  totalvi_moddrop_p75: {encoder: joint_moddrop,  hidden: 256, modality_dropout: 0.75, tier: 3}
 
 control_seeds:
   - 2026
@@ -57,3 +63,39 @@ control_seeds:
   - 2039
   - 2040
   - 2041
+
+# Development splits never contain the real target mouse. The SLN206 partial
+# benchmark tests FusionVI in the setting it was designed for: some proteins
+# remain observed on the target cells while the rest are imputed.
+benchmarks:
+  paper:
+    data: paper_figure3_missing_protein.h5ad
+    source_batch: SLN111-D1
+    target_batch: SLN111-D2
+    panel_available_batches: [SLN111-D1]
+    stage: final
+  dev_random:
+    data: dev_sln111_random.h5ad
+    source_batch: SLN111-D1
+    target_batch: DEV-HOLDOUT
+    panel_available_batches: [SLN111-D1]
+    stage: development
+  dev_tissue:
+    data: dev_sln111_tissue.h5ad
+    source_batch: SLN111-D1
+    target_batch: DEV-HOLDOUT
+    panel_available_batches: [SLN111-D1]
+    stage: development
+  sln206_partial:
+    data: sln206_partial_panel.h5ad
+    source_batch: SLN206-D1
+    target_batch: SLN206-D2
+    panel_available_batches: [SLN206-D1, SLN206-D2]
+    stage: final
+  dev_sln206_partial:
+    data: dev_sln206_partial.h5ad
+    source_batch: SLN206-D1
+    target_batch: DEV-HOLDOUT
+    panel_available_batches: [SLN206-D1, DEV-HOLDOUT]
+    stage: development
+dev_holdout_fraction: 0.2
