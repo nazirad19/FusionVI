@@ -95,8 +95,14 @@ are reported for every readout × metric.
 .\run_calibration.ps1 --arms totalvi fusionvi --seeds 2026 2027
 ```
 
-Interpretation guide: if FusionVI's RMSLE lead shrinks to zero under
-`calibrated`, and `residual_sd`/correlations do not favour it, the lead was a
-scale/bias effect rather than better information about which cells express
-each protein. Memory scales with posterior draws × batch × genes; lower
-`batch_size` in `predict` if a GPU runs out of memory.
+The completed 16-seed result follows that second pattern. FusionVI's original
+RMSLE difference versus totalVI was -0.0062, but after D1-only calibration it
+was +0.0085 (95% CI -0.0003 to +0.0173; Holm p=0.218). FusionVI also had higher
+residual error (+0.0065) and lower within-cell-type Spearman (0.1640 versus
+0.1681). Marker AUROC was effectively saturated for both models (0.9903 versus
+0.9909). The defensible conclusion is therefore that FusionVI changed output
+scale without adding detectable information about D2 protein variation.
+
+The re-evaluation also writes compact within-cell-type summaries and
+source-thresholded CD4/CD8/CD19 AUROCs. Memory scales with posterior draws ×
+batch × genes; lower `batch_size` in `predict` if a GPU runs out of memory.

@@ -50,6 +50,8 @@ from scvi.distributions import NegativeBinomialMixture
 from scvi.model import TOTALVI
 from sklearn.decomposition import TruncatedSVD
 from sklearn.linear_model import Ridge
+from sklearn.metrics import roc_auc_score
+from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 
 from benchmark_arms import build_model
@@ -120,12 +122,29 @@ def protein_metrics(pred: np.ndarray, truth: np.ndarray) -> pd.DataFrame:
         "rmsle": np.sqrt((err ** 2).mean(0)),
         "bias": err.mean(0),
         "residual_sd": err.std(0),
-        "spearman": [stats.spearmanr(truth[:, j], pred[:, j]).statistic if pred[:, j].std() > 0 else np.nan
-                     for j in range(truth.shape[1])],
-        "pearson": [stats.pearsonr(truth[:, j], pred[:, j]).statistic if pred[:, j].std() > 0 else np.nan
-                    for j in range(truth.shape[1])],
+        "spearman": column_correlations(truth, pred, rank=True),
+        "pearson": column_correlations(truth, pred, rank=False),
     }
     return pd.DataFrame(rows)
+
+
+def column_correlations(y: np.ndarray, pred: np.ndarray, rank: bool) -> np.ndarray:
+    """Vectorized column-wise Pearson or Spearman correlations."""
+    if rank:
+        y = stats.rankdata(y, axis=0)
+        pred = stats.rankdata(pred, axis=0)
+    y = np.asarray(y, dtype=np.float64)
+    pred = np.asarray(pred, dtype=np.float64)
+    y = y - y.mean(0)
+    pred = pred - pred.mean(0)
+    numerator = np.sum(y * pred, axis=0)
+    denominator = np.sqrt(np.sum(y * y, axis=0) * np.sum(pred * pred, axis=0))
+    return np.divide(
+        numerator,
+        denominator,
+        out=np.full(numerator.shape, np.nan, dtype=np.float64),
+        where=denominator > 0,
+    )
 
 
 def ridge_predictions(adata, source: np.ndarray, target: np.ndarray, truth_log: np.ndarray) -> np.ndarray:
@@ -215,7 +234,19 @@ def main() -> None:
     proteins = np.asarray(truth.columns, dtype=str)
     truth_log = np.log1p(truth.to_numpy(dtype=np.float64))
 
-    frames = []
+    cell_types = adata.obs.loc[target, "cell_type"].astype(str).to_numpy()
+    marker_tokens = {"CD4": "ADT_CD4_", "CD8": "ADT_CD8a_", "CD19": "ADT_CD19_"}
+    marker_thresholds = {}
+    for marker, token in marker_tokens.items():
+        j = next(i for i, name in enumerate(proteins) if token in name)
+        means = np.sort(
+            GaussianMixture(n_components=2, random_state=2026)
+            .fit(truth_log[source, j, None])
+            .means_.reshape(-1)
+        )
+        marker_thresholds[marker] = (j, float(means.mean()))
+
+    frames, within_rows, auc_rows = [], [], []
 
     def add(arm: str, seed: int | None, readout: str, pred: np.ndarray) -> None:
         m = protein_metrics(pred, truth_log[tgt_idx])
@@ -224,6 +255,37 @@ def main() -> None:
         m.insert(0, "seed", seed)
         m.insert(0, "arm", arm)
         frames.append(m)
+        for cell_type in np.unique(cell_types):
+            mask = cell_types == cell_type
+            if mask.sum() < 30:
+                continue
+            correlations = column_correlations(truth_log[tgt_idx][mask], pred[mask], rank=True)
+            within_rows.append(
+                {
+                    "arm": arm,
+                    "seed": seed,
+                    "readout": readout,
+                    "cell_type": cell_type,
+                    "n_cells": int(mask.sum()),
+                    "n_valid_proteins": int(np.isfinite(correlations).sum()),
+                    "mean_spearman": float(np.nanmean(correlations)),
+                    "median_spearman": float(np.nanmedian(correlations)),
+                }
+            )
+        for marker, (j, threshold) in marker_thresholds.items():
+            labels = truth_log[tgt_idx, j] > threshold
+            auc_rows.append(
+                {
+                    "arm": arm,
+                    "seed": seed,
+                    "readout": readout,
+                    "marker": marker,
+                    "protein": proteins[j],
+                    "source_log1p_threshold": threshold,
+                    "positive_fraction": float(labels.mean()),
+                    "auroc": float(roc_auc_score(labels, pred[:, j])),
+                }
+            )
 
     add("rna_ridge", None, "ridge", ridge_predictions(adata, source, target, truth_log))
 
@@ -235,6 +297,9 @@ def main() -> None:
             model = build_model(adata, cfg, cfg["arms"][arm])
             model.module.load_state_dict(torch.load(weights, map_location="cpu", weights_only=True))
             model.module.to(args.device)
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed)
             log_mean_t, pred_log_t = predict(model, adata, tgt_idx, source_code, n_samples, hide_protein=False)
             log_mean_c, _ = predict(model, adata, calib_idx, source_code, n_samples, hide_protein=True)
             add(arm, seed, "log_mean", log_mean_t)
@@ -245,11 +310,32 @@ def main() -> None:
     metrics = pd.concat(frames, ignore_index=True)
     metrics["model"] = metrics["arm"].map(lambda a: LABELS.get(a, a))
     metrics.to_csv(OUT / f"calibration_protein_metrics{suffix}.csv", index=False)
+    within = pd.DataFrame(within_rows)
+    auc = pd.DataFrame(auc_rows)
+    within["model"] = within["arm"].map(lambda a: LABELS.get(a, a))
+    auc["model"] = auc["arm"].map(lambda a: LABELS.get(a, a))
+    within.to_csv(OUT / f"calibration_within_celltype{suffix}.csv", index=False)
+    auc.to_csv(OUT / f"calibration_marker_auroc{suffix}.csv", index=False)
 
     # Per run: mean over proteins; |bias| averaged so opposite-signed proteins do not cancel.
     metrics["abs_bias"] = metrics["bias"].abs()
     value_cols = ["rmsle", "abs_bias", "residual_sd", "spearman", "pearson"]
     runs = metrics.groupby(["arm", "seed", "readout"], dropna=False)[value_cols].mean().reset_index()
+    within_runs = (
+        within.groupby(["arm", "seed", "readout"], dropna=False)["mean_spearman"]
+        .mean()
+        .rename("within_celltype_spearman")
+        .reset_index()
+    )
+    auc_runs = (
+        auc.groupby(["arm", "seed", "readout"], dropna=False)["auroc"]
+        .mean()
+        .rename("marker_auroc")
+        .reset_index()
+    )
+    runs = runs.merge(within_runs, on=["arm", "seed", "readout"], how="left")
+    runs = runs.merge(auc_runs, on=["arm", "seed", "readout"], how="left")
+    value_cols += ["within_celltype_spearman", "marker_auroc"]
     summary = runs.groupby(["arm", "readout"])[value_cols].mean()
     summary["n_seeds"] = runs.groupby(["arm", "readout"]).size()
     summary = summary.round(4)
@@ -274,6 +360,10 @@ def main() -> None:
             "ridge": "source-only RNA SVD(128) + ridge, alpha chosen on a D1 validation split",
         },
         "decomposition": "RMSLE^2 = bias^2 + residual_sd^2 per protein (log1p units)",
+        "biological_metrics": {
+            "within_celltype_spearman": "Spearman within each D2 cell type with at least 30 cells, averaged over cell-type/protein pairs",
+            "marker_auroc": "Mean D2 AUROC for prespecified CD4, CD8a and CD19 targets using source-D1 mixture thresholds",
+        },
         "calibration_cells": int(calib_idx.size),
         "posterior_samples": n_samples,
         "summary": json.loads(summary.reset_index().to_json(orient="records")),

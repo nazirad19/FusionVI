@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +23,22 @@ def main() -> None:
     indicator = contrasts[("totalvi_avail_w128", "totalvi_w128")]
     original = contrasts[("FusionVI", "totalVI")]
     n_seeds = same_width["n_seeds"]
+    calibration = pd.read_csv(ROOT / "results" / "calibration_summary.csv").set_index(["arm", "readout"])
+    calibration_contrasts = pd.read_csv(ROOT / "results" / "calibration_contrasts.csv")
+
+    def cal(arm: str, readout: str, metric: str) -> float:
+        return float(calibration.loc[(arm, readout), metric])
+
+    def cal_contrast(metric: str) -> dict:
+        row = calibration_contrasts[
+            (calibration_contrasts["readout"] == "calibrated")
+            & (calibration_contrasts["metric"] == metric)
+            & (calibration_contrasts["reference"] == "totalvi")
+        ].iloc[0]
+        return row.to_dict()
+
+    calibrated_rmsle = cal_contrast("rmsle")
+    calibrated_residual = cal_contrast("residual_sd")
     readme = f"""# FusionVI
 
 FusionVI is an experimental encoder variant evaluated on the published
@@ -60,7 +78,8 @@ and library-size estimation; the new control arms isolate those differences.
 ## Main result
 
 Across {n_seeds} paired random initializations, FusionVI reached mean
-per-protein RMSLE **{cmeans['FusionVI']:.4f}**. It was lower than:
+per-protein RMSLE **{cmeans['FusionVI']:.4f}** using the original
+`log1p(E[y])` readout. It was lower than:
 
 - the same-width joint encoder by **{abs(same_width['rmsle_diff']):.4f}**
   (95% CI {same_width['ci95_low']:+.4f} to {same_width['ci95_high']:+.4f};
@@ -78,28 +97,38 @@ Against the published totalVI configuration, the difference was
 the same-width joint encoder did not improve RMSLE ({indicator['rmsle_diff']:+.4f};
 p={indicator['p_t']:.2f}).
 
-A source-only RNA baseline using a 128-component SVD and multi-output ridge
-reached mean protein RMSLE **{ridge['mean_protein_rmsle']:.4f}**, substantially
-below every neural model. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
-within-cell-type Spearman was only {ridge['mean_within_celltype_spearman']:.3f}.
-Aggregate error and marker separation can therefore look strong without
-recovering subtle within-cell-state variation.
+That readout does not target the same scale as RMSLE. Every checkpoint was
+therefore re-scored without retraining using posterior `E[log1p y]` and a
+per-protein affine calibration fitted only on D1 RNA-only predictions:
 
-The original comparison was capacity-confounded: totalVI uses a 256-unit joint
-encoder and a separate library encoder, while FusionVI uses 128-unit branches
-and reuses the RNA branch for library size. The completed same-width,
-parameter-matched and missing-panel-aware controls show that the small FusionVI
-advantage is not explained by those differences alone.
-Tier 3 adds paired totalVI and FusionVI arms with 30% supervised whole-panel
-dropout, so the protein decoder learns from RNA-only latents under a fair
-comparison.
+| Readout | totalVI | FusionVI | FusionVI − totalVI |
+|---|---:|---:|---:|
+| Original `log1p(E[y])` | {cal('totalvi', 'log_mean', 'rmsle'):.4f} | {cal('fusionvi', 'log_mean', 'rmsle'):.4f} | {original['rmsle_diff']:+.4f} |
+| Posterior `E[log1p y]` | {cal('totalvi', 'pred_log', 'rmsle'):.4f} | {cal('fusionvi', 'pred_log', 'rmsle'):.4f} | {cal('fusionvi', 'pred_log', 'rmsle')-cal('totalvi', 'pred_log', 'rmsle'):+.4f} |
+| D1-only calibrated | **{cal('totalvi', 'calibrated', 'rmsle'):.4f}** | {cal('fusionvi', 'calibrated', 'rmsle'):.4f} | {calibrated_rmsle['fusionvi_minus_ref']:+.4f} |
+| RNA SVD-ridge | {cal('rna_ridge', 'ridge', 'rmsle'):.4f} | — | — |
+
+After calibration, FusionVI's RMSLE was numerically higher by
+{calibrated_rmsle['fusionvi_minus_ref']:+.4f} (95% CI
+{calibrated_rmsle['ci95_low']:+.4f} to {calibrated_rmsle['ci95_high']:+.4f};
+Holm p={calibrated_rmsle['p_holm_within_readout_metric']:.3f}). FusionVI also
+had higher residual error ({calibrated_residual['fusionvi_minus_ref']:+.4f})
+and lower within-cell-type Spearman ({cal('fusionvi', 'calibrated', 'within_celltype_spearman'):.4f}
+versus {cal('totalvi', 'calibrated', 'within_celltype_spearman'):.4f}). Marker
+AUROC was saturated for both models at approximately 0.99.
+
+The evidence therefore supports a calibration result: FusionVI's original
+RMSLE lead came mostly from output scale, not stronger recovery of biological
+variation. D1 calibration also moved both neural models below the widened RNA
+ridge RMSLE of {cal('rna_ridge', 'ridge', 'rmsle'):.4f}, showing that the old
+ridge-versus-neural gap was likewise dominated by scale.
 
 The paper used 30 initializations. This repository records that protocol but
 runs {n_seeds} paired seeds for the course benchmark. The result supports a bounded
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
-![FusionVI confirmatory encoder controls](results/figures/control_benchmark.png)
+![Scale-matched complete-panel evaluation](results/figures/calibration_benchmark.png)
 
 ## Reproduce
 
@@ -112,6 +141,7 @@ python -m venv .venv
 .\\run_paper_benchmark.ps1
 .\\run_controls.ps1 -Tier 1
 python src\\rna_baseline_paper_benchmark.py
+.\\run_calibration.ps1
 python -m unittest discover -s tests -v
 ```
 
@@ -129,6 +159,9 @@ results, figures and reports.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
 - `src/rna_baseline_paper_benchmark.py`: source-only tuned RNA ridge baseline.
 - `src/evaluate_biological_metrics.py`: foreground, within-cell-type and marker-AUROC metrics.
+- `src/evaluate_calibration.py`: scale-matched readouts, bias/residual decomposition and biological metrics.
+- `src/plot_calibration.py`: final calibration benchmark figure.
+- `src/plot_heldout_experiments.py`: neutral summary figures for Experiments 1--3.
 - `src/stats_paper_benchmark.py`: seed-level confidence intervals and exact tests.
 - `src/benchmark_arms.py`: capacity, missingness and gate control encoders.
 - `run_controls.ps1`: resumable seed-major control benchmark.

@@ -144,7 +144,7 @@ def main() -> None:
     axes[1].grid(axis="y", color="#E2E8F0", linewidth=0.8)
     for ax in axes:
         ax.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("FusionVI advantage survives matched encoder controls", x=0.06, ha="left", fontsize=15, weight="bold")
+    fig.suptitle("Seed-paired RMSLE: FusionVI and matched joint encoders", x=0.06, ha="left", fontsize=15, weight="bold")
     fig.tight_layout()
     fig.savefig(OUT / "figures" / "control_benchmark.png", dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)

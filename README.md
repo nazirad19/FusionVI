@@ -37,7 +37,8 @@ and library-size estimation; the new control arms isolate those differences.
 ## Main result
 
 Across 16 paired random initializations, FusionVI reached mean
-per-protein RMSLE **1.0539**. It was lower than:
+per-protein RMSLE **1.0539** using the original
+`log1p(E[y])` readout. It was lower than:
 
 - the same-width joint encoder by **0.0106**
   (95% CI -0.0135 to -0.0077;
@@ -55,28 +56,38 @@ Against the published totalVI configuration, the difference was
 the same-width joint encoder did not improve RMSLE (+0.0006;
 p=0.51).
 
-A source-only RNA baseline using a 128-component SVD and multi-output ridge
-reached mean protein RMSLE **0.6379**, substantially
-below every neural model. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
-within-cell-type Spearman was only 0.169.
-Aggregate error and marker separation can therefore look strong without
-recovering subtle within-cell-state variation.
+That readout does not target the same scale as RMSLE. Every checkpoint was
+therefore re-scored without retraining using posterior `E[log1p y]` and a
+per-protein affine calibration fitted only on D1 RNA-only predictions:
 
-The original comparison was capacity-confounded: totalVI uses a 256-unit joint
-encoder and a separate library encoder, while FusionVI uses 128-unit branches
-and reuses the RNA branch for library size. The completed same-width,
-parameter-matched and missing-panel-aware controls show that the small FusionVI
-advantage is not explained by those differences alone.
-Tier 3 adds paired totalVI and FusionVI arms with 30% supervised whole-panel
-dropout, so the protein decoder learns from RNA-only latents under a fair
-comparison.
+| Readout | totalVI | FusionVI | FusionVI − totalVI |
+|---|---:|---:|---:|
+| Original `log1p(E[y])` | 1.0600 | 1.0538 | -0.0062 |
+| Posterior `E[log1p y]` | 0.9616 | 0.9569 | -0.0047 |
+| D1-only calibrated | **0.5745** | 0.5831 | +0.0085 |
+| RNA SVD-ridge | 0.6373 | — | — |
+
+After calibration, FusionVI's RMSLE was numerically higher by
++0.0085 (95% CI
+-0.0003 to +0.0173;
+Holm p=0.218). FusionVI also
+had higher residual error (+0.0065)
+and lower within-cell-type Spearman (0.1640
+versus 0.1681). Marker
+AUROC was saturated for both models at approximately 0.99.
+
+The evidence therefore supports a calibration result: FusionVI's original
+RMSLE lead came mostly from output scale, not stronger recovery of biological
+variation. D1 calibration also moved both neural models below the widened RNA
+ridge RMSLE of 0.6373, showing that the old
+ridge-versus-neural gap was likewise dominated by scale.
 
 The paper used 30 initializations. This repository records that protocol but
 runs 16 paired seeds for the course benchmark. The result supports a bounded
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
-![FusionVI confirmatory encoder controls](results/figures/control_benchmark.png)
+![Scale-matched complete-panel evaluation](results/figures/calibration_benchmark.png)
 
 ## Reproduce
 
@@ -89,6 +100,7 @@ python -m venv .venv
 .\run_paper_benchmark.ps1
 .\run_controls.ps1 -Tier 1
 python src\rna_baseline_paper_benchmark.py
+.\run_calibration.ps1
 python -m unittest discover -s tests -v
 ```
 
@@ -106,6 +118,9 @@ results, figures and reports.
 - `src/evaluate_paper_benchmark.py`: aggregates metrics and figures.
 - `src/rna_baseline_paper_benchmark.py`: source-only tuned RNA ridge baseline.
 - `src/evaluate_biological_metrics.py`: foreground, within-cell-type and marker-AUROC metrics.
+- `src/evaluate_calibration.py`: scale-matched readouts, bias/residual decomposition and biological metrics.
+- `src/plot_calibration.py`: final calibration benchmark figure.
+- `src/plot_heldout_experiments.py`: neutral summary figures for Experiments 1--3.
 - `src/stats_paper_benchmark.py`: seed-level confidence intervals and exact tests.
 - `src/benchmark_arms.py`: capacity, missingness and gate control encoders.
 - `run_controls.ps1`: resumable seed-major control benchmark.

@@ -4,7 +4,7 @@
 
 Can modality-specific fusion improve recovery of therapeutic surface biomarkers when protein measurements are missing, discordant with RNA, or observed under an unseen perturbation?
 
-FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. In the complete-panel experiment, FusionVI retained a small RMSLE advantage over same-width, parameter-matched and missingness-aware joint encoders across 16 paired seeds. The advantage is algorithmically reproducible, although a simple RNA SVD-ridge model still performs substantially better on aggregate RMSLE.
+FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. In the complete-panel experiment, FusionVI had a small advantage under the original log1p-of-expected-count RMSLE, but the advantage disappeared after a D1-only scale calibration. Its residual error and within-cell-type ranking were slightly worse than totalVI. The controlled result therefore identifies output calibration, rather than additional biological information, as the main source of the original RMSLE difference.
 
 ## Experiment overview
 
@@ -13,7 +13,7 @@ FusionVI replaces totalVI's joint encoder with separate RNA and protein branches
 | 1. Donor-held-out activation | Lawlor PBMC CITE-seq; 10 donors | Can hidden CD25, CD69 and HLA-DR be recovered in an unseen donor, including RNA-protein-discordant cells? | Native encoders were close; a donor-safe cross-modal readout provided most of the gain. |
 | 2. Unseen perturbations | Papalexi ECCITE-seq; 25 CRISPR targets | Given a held-out perturbation cell's RNA and three measured proteins, can its hidden PD-L1 response be recovered? | FusionVI-X achieved effect Spearman 0.879 and 84.0% direction accuracy. |
 | 3. Targeted cross-mouse transfer | Original totalVI SLN111; 2 mice | Can four hidden immune markers be transferred to an unseen mouse? | A latent-free protein-context baseline reached 0.670; adding either latent changed Spearman by no more than 0.003. |
-| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 16 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI beat all three matched joint-encoder controls, but a source-only RNA ridge baseline remained substantially better. |
+| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 16 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI's raw RMSLE lead disappeared after source-only calibration; information-recovery metrics did not improve. |
 
 ## Method
 
@@ -79,19 +79,30 @@ This experiment follows the totalVI paper's Figure 3 missing-protein test. SLN11
 | Joint, parameter matched | Width 70 | 1.0728 | +0.0189 |
 | Joint plus availability | Width 128 plus missing-panel indicator | 1.0651 | +0.0112 |
 
-The source-only RNA baseline fit a 128-component SVD and multi-output ridge on D1, selected its penalty using a D1 validation split, and then predicted D2. It reached mean protein RMSLE **0.6379**, well below every neural model. Its source-defined marker AUROCs were 0.976 for CD4, 0.990 for CD8 and 0.995 for CD19, while mean within-cell-type Spearman was only 0.169. This contrast shows why aggregate error and marker separation can look strong while within-cell-state variation remains difficult.
+The original readout computes log1p of the expected protein count. Because the protein likelihood is overdispersed, this differs from the expected log1p count targeted by RMSLE. We therefore reloaded every checkpoint without retraining and evaluated three readouts: the original log1p(E[y]), posterior E[log1p y], and a per-protein affine calibration fitted only on D1 cells passed through the same RNA-only route as D2.
+
+| Readout | totalVI RMSLE | FusionVI RMSLE | FusionVI − totalVI |
+|---|---:|---:|---:|
+| Original log1p(E[y]) | 1.0600 | 1.0538 | -0.0062 |
+| Posterior E[log1p y] | 0.9616 | 0.9569 | -0.0047 |
+| D1-only calibrated | **0.5745** | 0.5831 | +0.0085 |
+| RNA SVD-ridge | 0.6373 | — | — |
+
+After calibration, FusionVI was numerically worse than totalVI by +0.0085 RMSLE (95% CI -0.0003 to +0.0173; Holm-adjusted p=0.218). Its residual error was higher by +0.0065 (Holm-adjusted p=0.00012), and its mean within-cell-type Spearman was 0.1640 versus 0.1681 for totalVI. Marker AUROC was essentially saturated for both models (0.9903 versus 0.9909).
+
+The widened RNA ridge baseline reached 0.6373 RMSLE. D1 calibration improved the neural models below ridge on aggregate error, confirming that the earlier ridge gap was largely a scale effect. Ridge and the neural models remained similar on overall and within-cell-type rank correlation.
 
 Random initialization is the valid replication unit. Against the same-width joint encoder, FusionVI reduced RMSLE by 0.0106 (95% CI -0.0135 to -0.0077; Holm-adjusted p=3.4e-06) and won 15/16 seeds. Against the parameter-matched joint encoder, the reduction was 0.0189 (95% CI -0.0216 to -0.0162; Holm-adjusted p=7.9e-10) with 16/16 wins. Against the missingness-aware joint encoder, the reduction was 0.0112 (95% CI -0.0143 to -0.0081; Holm-adjusted p=3.4e-06) with 15/16 wins. Adding the availability indicator to a same-width joint encoder did not help: difference +0.0006, 95% CI -0.0013 to +0.0025, p=0.51.
 
-The original comparison was capacity-confounded because totalVI used width 256, FusionVI used width-128 branches and FusionVI reused its RNA branch for library size. The matched controls now show that FusionVI's small advantage is not explained by width, parameter count or the missing-panel indicator alone. Its absolute size remains modest, and the simple RNA baseline outperformed every neural model on the primary aggregate endpoint. Paired modality-dropout arms are implemented but were not required for the completed Tier 1 claim.
+The original comparison was capacity-confounded because totalVI used width 256, FusionVI used width-128 branches and FusionVI reused its RNA branch for library size. Matched controls showed that FusionVI's original-scale RMSLE difference was reproducible, but the scale-matched analysis changes its meaning: calibration removes the apparent advantage, while residual and rank metrics do not favor FusionVI. Paired modality-dropout arms are implemented but were not required for this conclusion.
 
-![Confirmatory complete-panel controls](results/figures/control_benchmark.png)
+![Scale-matched complete-panel evaluation](results/figures/calibration_benchmark.png)
 
 ## Combined interpretation
 
 The four experiments do not support a blanket claim that FusionVI is always superior. They support three narrower conclusions:
 
-1. The complete missing-panel benchmark supports a small, reproducible FusionVI advantage over matched joint encoders across 16 paired seeds; the advantage remains much smaller than the gap between every neural model and the RNA SVD-ridge baseline.
+1. The complete missing-panel benchmark does not support improved biological information recovery by FusionVI. Its original RMSLE lead is chiefly a calibration effect and disappears after D1-only scale matching.
 2. For targeted cross-mouse marker recovery, measured protein context is more important than either learned latent representation.
 3. Multimodal context improves prediction of unseen PD-L1 perturbation effects, but post-transcriptional mechanisms such as CMTM6 remain difficult when RNA and surface protein move in opposite directions.
 
@@ -106,7 +117,8 @@ These results are relevant to therapeutic discovery as a biomarker-completion an
 - Experiment 4 seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.
 - The original Experiment 4 comparison differs in encoder width and library-network design; the completed same-width, parameter-matched and missingness-aware controls address these prespecified confounders.
 - Native-decoder and cross-modal-readout results are never pooled because they measure different contributions.
-- Modality-dropout arms and neural-model foreground/cell-type metrics remain pending and are excluded from the completed Tier 1 conclusion.
+- Modality-dropout arms remain pending. Neural overall, within-cell-type and marker-AUROC metrics are complete for all 16 seeds and all Tier 0/1 arms.
+- `results/calibration_summary.csv`, `calibration_contrasts.csv`, `calibration_within_celltype.csv` and `calibration_marker_auroc.csv` contain the scale-matched evaluation.
 - `results/fusionvi_experiments_summary.json` records the consolidated metrics used in this report.
 - `run_paper_benchmark.ps1` reproduces the current full-panel benchmark. The original Lawlor and Papalexi training pipelines were not retained, so Experiments 1 and 2 are documented from their saved held-out predictions, metrics and figures and are not reproducible from a fresh clone. The versioned `papalexi_effects.csv` does reproduce the target-cluster bootstrap with `stats_heldout_experiments.py exp2`.
 

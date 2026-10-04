@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -179,6 +181,22 @@ def main() -> None:
     availability = contrasts[("FusionVI", "totalvi_avail_w128")]
     indicator_only = contrasts[("totalvi_avail_w128", "totalvi_w128")]
     original_16 = contrasts[("FusionVI", "totalVI")]
+    calibration = pd.read_csv(ROOT / "results" / "calibration_summary.csv").set_index(["arm", "readout"])
+    calibration_contrasts = pd.read_csv(ROOT / "results" / "calibration_contrasts.csv")
+
+    def cal(arm: str, readout: str, metric: str) -> float:
+        return float(calibration.loc[(arm, readout), metric])
+
+    def cal_contrast(metric: str) -> dict:
+        row = calibration_contrasts[
+            (calibration_contrasts["readout"] == "calibrated")
+            & (calibration_contrasts["metric"] == metric)
+            & (calibration_contrasts["reference"] == "totalvi")
+        ].iloc[0]
+        return row.to_dict()
+
+    calibrated_rmsle = cal_contrast("rmsle")
+    calibrated_residual = cal_contrast("residual_sd")
     relative = 100 * (paper["totalvi_mean_rmsle"] - paper["fusionvi_mean_rmsle"]) / paper["totalvi_mean_rmsle"]
     parameter_reduction = 100 * (paper["totalvi_parameters"] - paper["fusionvi_parameters"]) / paper["totalvi_parameters"]
 
@@ -204,8 +222,8 @@ def main() -> None:
         "cover held-out human donors, held-out CRISPR targets, cross-mouse transfer and the full missing-protein-panel benchmark "
         "from the totalVI paper. The evidence is deliberately mixed: multimodal context is useful in the PD-L1 perturbation task, "
         "while targeted marker studies show that measured protein context often matters more than the learned latent. In the "
-        "complete-panel benchmark, FusionVI retains a small advantage over three matched joint-encoder controls across 16 seeds, "
-        "although a source-only RNA ridge baseline outperforms every neural model on aggregate RMSLE. "
+        "complete-panel benchmark, FusionVI has a small advantage only under the original log1p-of-mean readout. A D1-only "
+        "calibration removes that advantage, while residual and within-cell-type metrics slightly favour totalVI. "
         "These results support a bounded biomarker-completion "
         "and perturbation-ranking contribution."
     )
@@ -224,7 +242,7 @@ def main() -> None:
             ["Lawlor activation", "10 human donors", "Native encoders close; cross-modal context supplied most of the marker-recovery gain"],
             ["Papalexi PD-L1", "25 CRISPR targets", "FusionVI-X reached 0.879 effect Spearman and 84.0% direction accuracy"],
             ["SLN111 targeted markers", "2 mice", "Protein context + RNA reached 0.670; either latent added no more than 0.003"],
-            ["SLN111 complete panel", "16 paired seeds", f"FusionVI beat three matched joint encoders; RNA ridge RMSLE was {ridge['mean_protein_rmsle']:.3f}"],
+            ["SLN111 complete panel", "16 paired seeds", "Raw RMSLE lead vanished after D1-only calibration; information metrics did not improve"],
         ],
         [1.55, 1.35, 3.85],
     )
@@ -265,7 +283,7 @@ def main() -> None:
         "The ablation supplies the biological insight: a matching transcript can become misleading when RNA and surface protein "
         "diverge, while the remaining protein panel restores predictive context."
     )
-    add_figure(doc, ROOT / "results" / "figures" / "lawlor_marker_recovery.png", "Figure 1. Donor-paired native-decoder marker recovery. Large diamonds show means.", 6.55)
+    add_figure(doc, ROOT / "results" / "figures" / "lawlor_marker_recovery.png", "Figure 1. Aggregate hidden-marker recovery across 10 donor-held-out folds.", 6.55)
 
     doc.add_page_break()
     doc.add_heading("Experiment 2 Papalexi unseen CRISPR targets", level=1)
@@ -354,7 +372,7 @@ def main() -> None:
         ],
         [1.50, 2.65, 1.20, 1.45],
     )
-    add_result_lead(doc, "Result  FusionVI's small advantage survives matched encoder controls across 16 seeds.")
+    add_result_lead(doc, "Result  The original RMSLE lead is principally an output-scale effect.")
     doc.add_paragraph(
         f"Against the same-width joint encoder, FusionVI reduced RMSLE by {abs(same_width['rmsle_diff']):.4f} "
         f"(95% CI {same_width['ci95_low']:+.4f} to {same_width['ci95_high']:+.4f}; Holm p={same_width['p_holm']:.2g}) "
@@ -366,27 +384,43 @@ def main() -> None:
         f"alone did not help (difference {indicator_only['rmsle_diff']:+.4f}; p={indicator_only['p_t']:.2f})."
     )
     doc.add_paragraph(
-        f"A source-only RNA baseline fit a 128-component SVD and multi-output ridge on D1, selected its penalty on a D1 validation "
-        f"split, and reached mean D2 protein RMSLE {ridge['mean_protein_rmsle']:.4f}. This is substantially below every neural "
-        "model. Source-defined marker AUROC was "
-        f"{ridge['marker_auroc']['CD4']:.3f} for CD4, {ridge['marker_auroc']['CD8']:.3f} for CD8 and "
-        f"{ridge['marker_auroc']['CD19']:.3f} for CD19, but mean within-cell-type Spearman was only "
-        f"{ridge['mean_within_celltype_spearman']:.3f}. Aggregate marker separation therefore does not imply recovery of subtle "
-        "within-cell-state variation. Modality-dropout arms are implemented but were not part of the completed Tier 1 claim."
+        "Every checkpoint was then re-scored without retraining. Posterior E[log1p y] reduced both models' error, and a per-protein "
+        "affine calibration fitted only on D1 RNA-only predictions reduced mean RMSLE to "
+        f"{cal('totalvi', 'calibrated', 'rmsle'):.4f} for totalVI and {cal('fusionvi', 'calibrated', 'rmsle'):.4f} for FusionVI. "
+        f"The calibrated difference was {calibrated_rmsle['fusionvi_minus_ref']:+.4f} (95% CI "
+        f"{calibrated_rmsle['ci95_low']:+.4f} to {calibrated_rmsle['ci95_high']:+.4f}; Holm p="
+        f"{calibrated_rmsle['p_holm_within_readout_metric']:.3f})."
     )
-    add_figure(doc, ROOT / "results" / "figures" / "control_benchmark.png", "Figure 4. Seed-paired FusionVI contrasts against the three prespecified Tier 1 joint-encoder controls.", 6.70)
+    add_table(
+        doc,
+        ["Readout", "totalVI", "FusionVI", "FusionVI − totalVI"],
+        [
+            ["Original log1p(E[y])", f"{cal('totalvi', 'log_mean', 'rmsle'):.4f}", f"{cal('fusionvi', 'log_mean', 'rmsle'):.4f}", f"{original_16['rmsle_diff']:+.4f}"],
+            ["Posterior E[log1p y]", f"{cal('totalvi', 'pred_log', 'rmsle'):.4f}", f"{cal('fusionvi', 'pred_log', 'rmsle'):.4f}", f"{cal('fusionvi', 'pred_log', 'rmsle')-cal('totalvi', 'pred_log', 'rmsle'):+.4f}"],
+            ["D1-only calibrated", f"{cal('totalvi', 'calibrated', 'rmsle'):.4f}", f"{cal('fusionvi', 'calibrated', 'rmsle'):.4f}", f"{calibrated_rmsle['fusionvi_minus_ref']:+.4f}"],
+            ["RNA SVD-ridge", f"{cal('rna_ridge', 'ridge', 'rmsle'):.4f}", "—", "—"],
+        ],
+        [2.75, 1.30, 1.30, 1.70],
+    )
+    doc.add_paragraph(
+        f"FusionVI's calibrated residual error was higher by {calibrated_residual['fusionvi_minus_ref']:+.4f}. Mean within-cell-type "
+        f"Spearman was {cal('fusionvi', 'calibrated', 'within_celltype_spearman'):.4f} for FusionVI versus "
+        f"{cal('totalvi', 'calibrated', 'within_celltype_spearman'):.4f} for totalVI; marker AUROC was approximately 0.99 for both. "
+        f"The widened RNA ridge reached {cal('rna_ridge', 'ridge', 'rmsle'):.4f} RMSLE, so calibrated neural predictions actually "
+        "outperformed it on aggregate error. The earlier ridge gap was therefore also largely a scale effect."
+    )
+    add_figure(doc, ROOT / "results" / "figures" / "calibration_benchmark.png", "Figure 4. Scale-matched complete-panel evaluation across 16 paired seeds.", 6.70)
 
-    doc.add_page_break()
     doc.add_heading("Combined interpretation", level=1)
     doc.add_paragraph(
-        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment shows a small, "
-        "reproducible FusionVI advantage over matched joint encoders across 16 paired seeds, while an RNA ridge baseline still "
-        "performs substantially better on aggregate RMSLE. When other proteins remain "
+        "The experiments support a narrow and biologically coherent contribution. The complete-panel experiment shows that "
+        "FusionVI's original RMSLE lead is mainly calibration, while scale-free and residual metrics do not support stronger "
+        "biological recovery. When other proteins remain "
         "available, measured protein context often contributes more than the learned latent. The Papalexi result shows that multimodal context "
         "can rank unseen PD-L1 perturbation effects, while the CMTM6 failure exposes a post-transcriptional boundary."
     )
-    add_bullet(doc, "Controlled benchmark result: FusionVI beat same-width, parameter-matched and missingness-aware joint encoders.")
-    add_bullet(doc, "Negative benchmark result: RNA SVD-ridge outperformed every neural model on full-panel RMSLE.")
+    add_bullet(doc, "Controlled benchmark result: the raw FusionVI RMSLE lead disappears after D1-only calibration.")
+    add_bullet(doc, "Scale diagnosis: calibration improves both neural models below the RNA ridge aggregate RMSLE.")
     add_bullet(doc, "Positive result: improved ranking and direction of unseen PD-L1 perturbation effects.")
     add_bullet(doc, "Negative result: the encoder alone did not consistently improve donor-held-out marker recovery.")
     add_bullet(doc, "Boundary condition: RNA-centered evidence can fail for protein-stability mechanisms such as CMTM6.")
@@ -403,8 +437,8 @@ def main() -> None:
     add_bullet(doc, "Same-width, parameter-matched and missingness-aware controls are complete; modality-dropout arms remain pending.")
     add_bullet(doc, "Seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.")
     add_bullet(doc, "Native and X-readout results are separated throughout the report.")
-    add_bullet(doc, "Neural-model foreground, cell-type and marker-AUROC analyses remain pending.")
-    add_bullet(doc, "Consolidated metrics are stored in results/fusionvi_experiments_summary.json.")
+    add_bullet(doc, "Overall, within-cell-type and CD4/CD8/CD19 AUROC metrics are complete for all Tier 0/1 arms; modality-dropout arms remain pending.")
+    add_bullet(doc, "Calibration outputs are stored in results/calibration_summary.csv and calibration_contrasts.csv.")
     doc.add_paragraph(
         "The current full-panel benchmark is reproduced with .\\run_paper_benchmark.ps1. The original Lawlor and Papalexi training "
         "pipelines were not retained, so Experiments 1 and 2 are documented from saved held-out predictions, metrics and figures and "

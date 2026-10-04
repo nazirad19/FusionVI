@@ -6,5 +6,7 @@ if (-not (Test-Path $python)) { throw 'Create .venv and install requirements.txt
 Push-Location (Join-Path $PSScriptRoot 'src')
 & $python 'evaluate_calibration.py' @args
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Calibration evaluation failed' }
+& $python 'plot_calibration.py'
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Calibration plotting failed' }
 Pop-Location
 & $python -m unittest tests.test_calibration
