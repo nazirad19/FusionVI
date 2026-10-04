@@ -10,17 +10,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
-    h = json.loads((ROOT / "results" / "paper_benchmark_headline.json").read_text())
-    inference = json.loads((ROOT / "results" / "paper_benchmark_seed_inference.json").read_text())["metrics"]["rmsle"]
-    total = h["totalvi_mean_rmsle"]
-    fusion = h["fusionvi_mean_rmsle"]
-    delta = h["fusionvi_minus_totalvi_rmsle"]
-    relation = "lower" if delta < 0 else "higher"
-    params = {r["model"]: r["trainable_parameters"] for r in h["completed_runs"]}
-    reduction = 100 * (params["totalVI"] - params["FusionVI"]) / params["totalVI"]
-    n_seeds = h["completed_fusionvi_initializations"]
     experiments = json.loads((ROOT / "results" / "fusionvi_experiments_summary.json").read_text())["experiments"]
     ridge = experiments[3]["rna_ridge_baseline"]
+    controls = experiments[3]["confirmatory_controls"]
+    cmeans = controls["mean_rmsle"]
+    contrasts = {(r["candidate"], r["reference"]): r for r in controls["contrasts"]}
+    same_width = contrasts[("FusionVI", "totalvi_w128")]
+    param_match = contrasts[("FusionVI", "totalvi_pmatch")]
+    availability = contrasts[("FusionVI", "totalvi_avail_w128")]
+    indicator = contrasts[("totalvi_avail_w128", "totalvi_w128")]
+    original = contrasts[("FusionVI", "totalVI")]
+    n_seeds = same_width["n_seeds"]
     readme = f"""# FusionVI
 
 FusionVI is an experimental encoder variant evaluated on the published
@@ -59,30 +59,37 @@ and library-size estimation; the new control arms isolate those differences.
 
 ## Main result
 
-Across {n_seeds} paired random initializations, mean per-protein RMSLE was
-**{total:.4f} for totalVI** and **{fusion:.4f} for FusionVI**. FusionVI was
-**{abs(delta):.4f} {relation}** on the primary metric and used
-**{reduction:.1f}% fewer trainable parameters**. FusionVI had lower mean RMSLE
-for **{h['proteins_fusionvi_better']} of {h['proteins_compared']} proteins**.
+Across {n_seeds} paired random initializations, FusionVI reached mean
+per-protein RMSLE **{cmeans['FusionVI']:.4f}**. It was lower than:
 
-The seed-paired RMSLE difference was {inference['mean_difference']:+.4f}
-(95% t interval {inference['t_ci95'][0]:+.4f} to {inference['t_ci95'][1]:+.4f};
-p={inference['paired_t_p']:.2f}). The interval includes zero. The earlier
-protein-level p-value is descriptive because proteins are repeated outcomes
-within each initialization.
+- the same-width joint encoder by **{abs(same_width['rmsle_diff']):.4f}**
+  (95% CI {same_width['ci95_low']:+.4f} to {same_width['ci95_high']:+.4f};
+  {same_width['seeds_candidate_better']}/16 seed wins);
+- the parameter-matched joint encoder by **{abs(param_match['rmsle_diff']):.4f}**
+  (95% CI {param_match['ci95_low']:+.4f} to {param_match['ci95_high']:+.4f};
+  {param_match['seeds_candidate_better']}/16 wins); and
+- the missingness-aware joint encoder by **{abs(availability['rmsle_diff']):.4f}**
+  (95% CI {availability['ci95_low']:+.4f} to {availability['ci95_high']:+.4f};
+  {availability['seeds_candidate_better']}/16 wins).
+
+Against the published totalVI configuration, the difference was
+{original['rmsle_diff']:+.4f} (95% CI {original['ci95_low']:+.4f} to
+{original['ci95_high']:+.4f}; 14/16 wins). Adding a missing-panel indicator to
+the same-width joint encoder did not improve RMSLE ({indicator['rmsle_diff']:+.4f};
+p={indicator['p_t']:.2f}).
 
 A source-only RNA baseline using a 128-component SVD and multi-output ridge
 reached mean protein RMSLE **{ridge['mean_protein_rmsle']:.4f}**, substantially
-below both neural models. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
+below every neural model. Its CD4/CD8/CD19 AUROCs exceeded 0.97, but its mean
 within-cell-type Spearman was only {ridge['mean_within_celltype_spearman']:.3f}.
 Aggregate error and marker separation can therefore look strong without
 recovering subtle within-cell-state variation.
 
-The original comparison is also capacity-confounded: totalVI uses a 256-unit
-joint encoder and a separate library encoder, while FusionVI uses 128-unit
-branches and reuses the RNA branch for library size. The parameter reduction
-therefore cannot be attributed to modality fusion. `run_controls.ps1` adds
-same-width, parameter-matched and missing-panel-aware joint controls.
+The original comparison was capacity-confounded: totalVI uses a 256-unit joint
+encoder and a separate library encoder, while FusionVI uses 128-unit branches
+and reuses the RNA branch for library size. The completed same-width,
+parameter-matched and missing-panel-aware controls show that the small FusionVI
+advantage is not explained by those differences alone.
 Tier 3 adds paired totalVI and FusionVI arms with 30% supervised whole-panel
 dropout, so the protein decoder learns from RNA-only latents under a fair
 comparison.
@@ -92,7 +99,7 @@ runs {n_seeds} paired seeds for the course benchmark. The result supports a boun
 algorithmic comparison on one source-target batch pair; it does not establish
 clinical or population-level biological generalization.
 
-![Paper-aligned totalVI versus FusionVI benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
+![FusionVI confirmatory encoder controls](results/figures/control_benchmark.png)
 
 ## Reproduce
 

@@ -17,6 +17,14 @@ def main() -> None:
     pb = papalexi["target_cluster_bootstrap"]
     pt = papalexi["paired_target_test"]
     ridge = paper["rna_ridge_baseline"]
+    controls = paper["confirmatory_controls"]
+    cmeans = controls["mean_rmsle"]
+    contrasts = {(row["candidate"], row["reference"]): row for row in controls["contrasts"]}
+    same_width = contrasts[("FusionVI", "totalvi_w128")]
+    param_match = contrasts[("FusionVI", "totalvi_pmatch")]
+    availability = contrasts[("FusionVI", "totalvi_avail_w128")]
+    indicator_only = contrasts[("totalvi_avail_w128", "totalvi_w128")]
+    original_16 = contrasts[("FusionVI", "totalVI")]
     relative = 100 * (paper["totalvi_mean_rmsle"] - paper["fusionvi_mean_rmsle"]) / paper["totalvi_mean_rmsle"]
     parameter_reduction = 100 * (paper["totalvi_parameters"] - paper["fusionvi_parameters"]) / paper["totalvi_parameters"]
 
@@ -26,7 +34,7 @@ def main() -> None:
 
 Can modality-specific fusion improve recovery of therapeutic surface biomarkers when protein measurements are missing, discordant with RNA, or observed under an unseen perturbation?
 
-FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. Together, they show useful multimodal signal in therapeutic biomarker tasks, while the specific advantage of the FusionVI encoder remains uncertain after accounting for seed variation, measured protein context and model capacity.
+FusionVI replaces totalVI's joint encoder with separate RNA and protein branches and a cell-level gate while retaining the totalVI decoder and likelihoods. The latest missing-panel version explicitly routes cells through the RNA branch when the complete protein panel is absent. Four experiments test different forms of generalization. In the complete-panel experiment, FusionVI retained a small RMSLE advantage over same-width, parameter-matched and missingness-aware joint encoders across 16 paired seeds. The advantage is algorithmically reproducible, although a simple RNA SVD-ridge model still performs substantially better on aggregate RMSLE.
 
 ## Experiment overview
 
@@ -35,7 +43,7 @@ FusionVI replaces totalVI's joint encoder with separate RNA and protein branches
 | 1. Donor-held-out activation | Lawlor PBMC CITE-seq; 10 donors | Can hidden CD25, CD69 and HLA-DR be recovered in an unseen donor, including RNA-protein-discordant cells? | Native encoders were close; a donor-safe cross-modal readout provided most of the gain. |
 | 2. Unseen perturbations | Papalexi ECCITE-seq; 25 CRISPR targets | Given a held-out perturbation cell's RNA and three measured proteins, can its hidden PD-L1 response be recovered? | FusionVI-X achieved effect Spearman {pm['fusionvi_xmodal']['effect_spearman']:.3f} and 84.0% direction accuracy. |
 | 3. Targeted cross-mouse transfer | Original totalVI SLN111; 2 mice | Can four hidden immune markers be transferred to an unseen mouse? | A latent-free protein-context baseline reached {targeted['protein_context_plus_rna_mean_spearman']:.3f}; adding either latent changed Spearman by no more than {max(targeted['totalvi_latent_increment'], targeted['fusionvi_latent_increment']):.3f}. |
-| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 4 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI's mean RMSLE was {abs(paper['fusionvi_minus_totalvi_rmsle']):.4f} lower, but a source-only RNA ridge baseline was substantially better than both neural models. |
+| 4. Complete missing panel | totalVI Figure 3 SLN111 design; 16 paired seeds | Can RNA recover all 110 proteins in a batch with no protein input? | FusionVI beat all three matched joint-encoder controls, but a source-only RNA ridge baseline remained substantially better. |
 
 ## Method
 
@@ -91,27 +99,29 @@ The native FusionVI decoder improved modestly, but the latent-free control chang
 
 ## Experiment 4 paper-aligned complete missing panel
 
-This experiment follows the totalVI paper's Figure 3 missing-protein test. SLN111-D1 retained RNA and all 110 proteins, while every D2 protein was hidden during training and preserved only for scoring. Both models used the same 20-dimensional latent space, native decoder and likelihoods, optimizer, split, 500-epoch budget and 25 posterior samples. Four paired seeds were run; the paper used 30.
+This experiment follows the totalVI paper's Figure 3 missing-protein test. SLN111-D1 retained RNA and all 110 proteins, while every D2 protein was hidden during training and preserved only for scoring. Every neural model used the same 20-dimensional latent space, native decoder and likelihoods, optimizer, split, 500-epoch budget and 25 posterior samples. Sixteen paired seeds were run; the paper used 30 initializations.
 
-| Metric | totalVI | FusionVI | Difference |
-|---|---:|---:|---:|
-| RMSLE primary | {paper['totalvi_mean_rmsle']:.4f} | **{paper['fusionvi_mean_rmsle']:.4f}** | {paper['fusionvi_minus_totalvi_rmsle']:+.4f} |
-| Proteins with lower RMSLE | — | {paper['proteins_fusionvi_better']}/{paper['proteins_compared']} | — |
-| Trainable parameters | {paper['totalvi_parameters']:,} | {paper['fusionvi_parameters']:,} | {parameter_reduction:.1f}% fewer |
+| Model | Encoder comparison | Mean RMSLE across 16 seeds | Difference versus FusionVI |
+|---|---|---:|---:|
+| FusionVI | Separate branches plus learned gate | **{cmeans['FusionVI']:.4f}** | reference |
+| totalVI | Published joint encoder, width 256 | {cmeans['totalVI']:.4f} | {-original_16['rmsle_diff']:+.4f} |
+| Joint, same width | Width 128 | {cmeans['totalvi_w128']:.4f} | {-same_width['rmsle_diff']:+.4f} |
+| Joint, parameter matched | Width 70 | {cmeans['totalvi_pmatch']:.4f} | {-param_match['rmsle_diff']:+.4f} |
+| Joint plus availability | Width 128 plus missing-panel indicator | {cmeans['totalvi_avail_w128']:.4f} | {-availability['rmsle_diff']:+.4f} |
 
-The source-only RNA baseline fit a 128-component SVD and multi-output ridge on D1, selected its penalty using a D1 validation split, and then predicted D2. It reached mean protein RMSLE **{ridge['mean_protein_rmsle']:.4f}**, well below totalVI ({paper['totalvi_mean_rmsle']:.4f}) and FusionVI ({paper['fusionvi_mean_rmsle']:.4f}). Its source-defined marker AUROCs were {ridge['marker_auroc']['CD4']:.3f} for CD4, {ridge['marker_auroc']['CD8']:.3f} for CD8 and {ridge['marker_auroc']['CD19']:.3f} for CD19, while mean within-cell-type Spearman was only {ridge['mean_within_celltype_spearman']:.3f}. This contrast shows why aggregate error and marker separation can look strong while within-cell-state variation remains difficult.
+The source-only RNA baseline fit a 128-component SVD and multi-output ridge on D1, selected its penalty using a D1 validation split, and then predicted D2. It reached mean protein RMSLE **{ridge['mean_protein_rmsle']:.4f}**, well below every neural model. Its source-defined marker AUROCs were {ridge['marker_auroc']['CD4']:.3f} for CD4, {ridge['marker_auroc']['CD8']:.3f} for CD8 and {ridge['marker_auroc']['CD19']:.3f} for CD19, while mean within-cell-type Spearman was only {ridge['mean_within_celltype_spearman']:.3f}. This contrast shows why aggregate error and marker separation can look strong while within-cell-state variation remains difficult.
 
-FusionVI's average RMSLE was {relative:.2f}% lower, but the random initialization is the valid replication unit. The paired seed difference was {paper['fusionvi_minus_totalvi_rmsle']:+.4f} (95% CI {paper['seed_level_rmsle_ci95'][0]:+.4f} to {paper['seed_level_rmsle_ci95'][1]:+.4f}; paired t p={paper['seed_level_paired_t_p']:.2f}; exact sign-flip p={paper['seed_level_exact_p']:.2f}). Three of four seeds favored FusionVI, and approximately {paper['seeds_for_80pct_power']} paired seeds are needed for 80% power at the observed effect. The much smaller protein-level Wilcoxon p-value ({paper['protein_level_wilcoxon_p']:.3g}) is descriptive because proteins are repeated outcomes inside each seed.
+Random initialization is the valid replication unit. Against the same-width joint encoder, FusionVI reduced RMSLE by {abs(same_width['rmsle_diff']):.4f} (95% CI {same_width['ci95_low']:+.4f} to {same_width['ci95_high']:+.4f}; Holm-adjusted p={same_width['p_holm']:.2g}) and won {same_width['seeds_candidate_better']}/16 seeds. Against the parameter-matched joint encoder, the reduction was {abs(param_match['rmsle_diff']):.4f} (95% CI {param_match['ci95_low']:+.4f} to {param_match['ci95_high']:+.4f}; Holm-adjusted p={param_match['p_holm']:.2g}) with 16/16 wins. Against the missingness-aware joint encoder, the reduction was {abs(availability['rmsle_diff']):.4f} (95% CI {availability['ci95_low']:+.4f} to {availability['ci95_high']:+.4f}; Holm-adjusted p={availability['p_holm']:.2g}) with {availability['seeds_candidate_better']}/16 wins. Adding the availability indicator to a same-width joint encoder did not help: difference {indicator_only['rmsle_diff']:+.4f}, 95% CI {indicator_only['ci95_low']:+.4f} to {indicator_only['ci95_high']:+.4f}, p={indicator_only['p_t']:.2f}.
 
-The architecture comparison is also capacity-confounded: totalVI used width 256, FusionVI branches used width 128, and FusionVI reused its RNA branch for library size rather than retaining totalVI's second encoder. These implementation choices explain most of the {parameter_reduction:.1f}% parameter difference. Same-width, parameter-matched and missing-panel-aware joint-encoder controls are therefore part of the confirmatory benchmark. More decisively, the simple RNA baseline outperformed both neural models on the primary endpoint, so the 0.006 neural-model gap is not evidence of a practically better imputation method. Paired modality-dropout arms now test whether training the decoder on protein-supervised RNA-only latents closes that gap.
+The original comparison was capacity-confounded because totalVI used width 256, FusionVI used width-128 branches and FusionVI reused its RNA branch for library size. The matched controls now show that FusionVI's small advantage is not explained by width, parameter count or the missing-panel indicator alone. Its absolute size remains modest, and the simple RNA baseline outperformed every neural model on the primary aggregate endpoint. Paired modality-dropout arms are implemented but were not required for the completed Tier 1 claim.
 
-![Paper-aligned complete-panel benchmark](results/figures/paper_benchmark_totalvi_vs_fusionvi.png)
+![Confirmatory complete-panel controls](results/figures/control_benchmark.png)
 
 ## Combined interpretation
 
 The four experiments do not support a blanket claim that FusionVI is always superior. They support three narrower conclusions:
 
-1. The complete missing-panel benchmark suggests a small FusionVI-versus-totalVI difference, but four seeds and unequal model capacity do not identify gated fusion as its cause; an RNA SVD-ridge baseline performs substantially better than both.
+1. The complete missing-panel benchmark supports a small, reproducible FusionVI advantage over matched joint encoders across 16 paired seeds; the advantage remains much smaller than the gap between every neural model and the RNA SVD-ridge baseline.
 2. For targeted cross-mouse marker recovery, measured protein context is more important than either learned latent representation.
 3. Multimodal context improves prediction of unseen PD-L1 perturbation effects, but post-transcriptional mechanisms such as CMTM6 remain difficult when RNA and surface protein move in opposite directions.
 
@@ -122,11 +132,11 @@ These results are relevant to therapeutic discovery as a biomarker-completion an
 - Experiment 1 uses 10 independent donors but one dose and one 24-hour timepoint.
 - Experiment 2 uses one IFN-gamma-treated cell line; it tests mechanism-level transfer rather than patient response.
 - Experiment 3 has only two mice and should be treated as a technical replication.
-- Experiment 4 covers one source-target batch pair and four seeds rather than the paper's 30 initializations.
+- Experiment 4 covers one source-target batch pair and 16 seeds rather than the paper's 30 initializations.
 - Experiment 4 seed-level inference is primary; per-protein tests are descriptive repeated-outcome summaries.
-- The original Experiment 4 comparison differs in encoder width and library-network design. `run_controls.ps1` executes the prespecified capacity and missingness controls.
+- The original Experiment 4 comparison differs in encoder width and library-network design; the completed same-width, parameter-matched and missingness-aware controls address these prespecified confounders.
 - Native-decoder and cross-modal-readout results are never pooled because they measure different contributions.
-- The RNA-only baseline, modality-dropout arms and biological secondary metrics are prespecified in code; modality-dropout full runs and neural-model foreground/cell-type metrics remain pending.
+- Modality-dropout arms and neural-model foreground/cell-type metrics remain pending and are excluded from the completed Tier 1 conclusion.
 - `results/fusionvi_experiments_summary.json` records the consolidated metrics used in this report.
 - `run_paper_benchmark.ps1` reproduces the current full-panel benchmark. The original Lawlor and Papalexi training pipelines were not retained, so Experiments 1 and 2 are documented from their saved held-out predictions, metrics and figures and are not reproducible from a fresh clone. The versioned `papalexi_effects.csv` does reproduce the target-cluster bootstrap with `stats_heldout_experiments.py exp2`.
 

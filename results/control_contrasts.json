@@ -1,0 +1,66 @@
+[
+  {
+    "candidate": "FusionVI",
+    "reference": "totalvi_w128",
+    "question": "Does branch fusion beat a joint encoder of the same width?",
+    "n_seeds": 16,
+    "rmsle_diff": -0.010610446070729807,
+    "ci95_low": -0.013499942817181854,
+    "ci95_high": -0.007720949324277759,
+    "seeds_candidate_better": 15,
+    "p_t": 1.126251983126839e-06,
+    "p_exact": 6.103515625e-05,
+    "p_holm": 3.378755949380517e-06
+  },
+  {
+    "candidate": "FusionVI",
+    "reference": "totalvi_pmatch",
+    "question": "Does branch fusion beat a joint encoder with the same parameter count?",
+    "n_seeds": 16,
+    "rmsle_diff": -0.0189151990359971,
+    "ci95_low": -0.021606526819886663,
+    "ci95_high": -0.01622387125210754,
+    "seeds_candidate_better": 16,
+    "p_t": 1.9776984072513676e-10,
+    "p_exact": 3.0517578125e-05,
+    "p_holm": 7.91079362900547e-10
+  },
+  {
+    "candidate": "FusionVI",
+    "reference": "totalvi_avail_w128",
+    "question": "Does fusion add anything beyond telling a joint encoder the panel is missing?",
+    "n_seeds": 16,
+    "rmsle_diff": -0.01120199014928755,
+    "ci95_low": -0.014275648440956783,
+    "ci95_high": -0.008128331857618316,
+    "seeds_candidate_better": 15,
+    "p_t": 1.2346932987547708e-06,
+    "p_exact": 6.103515625e-05,
+    "p_holm": 3.378755949380517e-06
+  },
+  {
+    "candidate": "totalvi_avail_w128",
+    "reference": "totalvi_w128",
+    "question": "Does the missing-panel indicator alone help a joint encoder?",
+    "n_seeds": 16,
+    "rmsle_diff": 0.000591544078557743,
+    "ci95_low": -0.0012948752897845917,
+    "ci95_high": 0.002477963446900078,
+    "seeds_candidate_better": 7,
+    "p_t": 0.5140451265138456,
+    "p_exact": 0.512542724609375,
+    "p_holm": 0.5140451265138456
+  },
+  {
+    "candidate": "FusionVI",
+    "reference": "totalVI",
+    "question": "Original comparison (confounded by width and the library network).",
+    "n_seeds": 16,
+    "rmsle_diff": -0.006224527535597976,
+    "ci95_low": -0.008619685164763741,
+    "ci95_high": -0.003829369906432212,
+    "seeds_candidate_better": 14,
+    "p_t": 5.673480443832294e-05,
+    "p_exact": 0.00018310546875
+  }
+]

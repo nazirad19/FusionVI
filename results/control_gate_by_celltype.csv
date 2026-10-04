@@ -1,0 +1,36 @@
+cell_type,fusionvi,learned_minus_mean
+Erythrocytes,0.534,-0.092
+pDCs,0.544,-0.082
+Ly6-high mono,0.574,-0.052
+cDC2s,0.576,-0.05
+Cycling B/T cells,0.583,-0.043
+Ly6-low mono,0.585,-0.041
+NK,0.596,-0.03
+Neutrophils,0.596,-0.03
+GD T,0.597,-0.029
+Migratory DCs,0.598,-0.028
+NKT,0.606,-0.02
+B-macrophage doublets,0.618,-0.008
+cDC1s,0.62,-0.006
+CD122+ CD8 T,0.622,-0.004
+B-CD8 T cell doublets,0.622,-0.004
+Tregs,0.623,-0.003
+ICOS-high Tregs,0.626,0.0
+B-CD4 T cell doublets,0.627,0.001
+Activated CD4 T,0.634,0.008
+Red-pulp macrophages,0.64,0.014
+MZ/Marco-high macrophages,0.64,0.014
+B1 B,0.641,0.015
+Ifit3-high CD8 T,0.641,0.015
+MZ B,0.641,0.015
+CD8 T,0.644,0.018
+CD4 T,0.653,0.027
+Ifit3-high CD4 T,0.658,0.032
+Mature B,0.659,0.033
+T doublets,0.659,0.033
+Transitional B,0.66,0.034
+Ifit3-high B,0.664,0.038
+Low quality T cells,0.672,0.046
+B doublets,0.675,0.049
+Plasma B,0.684,0.058
+Low quality B cells,0.69,0.064
