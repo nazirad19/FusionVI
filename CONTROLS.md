@@ -69,3 +69,34 @@ consolidated metrics file. `src/param_match.py` recomputes matched widths.
   target-cluster bootstrap. Lawlor cell-level predictions are unavailable.
 - `src/evaluate.py` labels its supervised readout `FusionVI-X`; native decoder
   and cross-modal readout results are not pooled.
+
+## Scale-matched and calibrated re-evaluation (no retraining)
+
+RMSLE is minimized by predicting E[log1p y]. The neural arms were scored on
+log1p(E[y]), which is biased upward for over-dispersed counts, while the RNA
+ridge is fit on log1p(y) directly. That alone can create large RMSLE gaps
+between models that rank cells equally well (ridge Spearman 0.322 vs FusionVI
+0.326, yet RMSLE 0.638 vs 1.054). `src/evaluate_calibration.py` reloads each
+saved model and scores D2 three ways:
+
+| Readout | Definition |
+|---|---|
+| `log_mean` | log1p(E[y]) with background, source-batch decoding (original metric; reproduces scvi's `get_normalized_expression` within Monte Carlo noise) |
+| `pred_log` | E[log1p y]: mean of log1p over posterior predictive draws from the protein NB mixture |
+| `calibrated` | per-protein affine map of `log_mean`, fitted on D1 cells pushed through the same RNA-only encoder route as D2; no D2 truth used |
+
+Every row reports RMSLE with its decomposition RMSLE² = bias² + residual_sd²,
+plus Spearman and Pearson. The ridge baseline is re-scored on the same cells
+(alpha grid extended to 1e5). Seed-paired FusionVI-minus-control contrasts
+are reported for every readout × metric.
+
+```powershell
+.\run_calibration.ps1                                   # tier 0+1 arms, all control seeds
+.\run_calibration.ps1 --arms totalvi fusionvi --seeds 2026 2027
+```
+
+Interpretation guide: if FusionVI's RMSLE lead shrinks to zero under
+`calibrated`, and `residual_sd`/correlations do not favour it, the lead was a
+scale/bias effect rather than better information about which cells express
+each protein. Memory scales with posterior draws × batch × genes; lower
+`batch_size` in `predict` if a GPU runs out of memory.
